@@ -1,6 +1,6 @@
 # Determinismo aplicado ao processamento de texto
 
-Aplicação Python para experimentos científicos de mestrado. O experimento de mapeamento constrói um mapa de **ocorrências de palavras por segmento**, independente de modelos de linguagem. Cada execução explícita de `map` reconstrói `map` em todos os segmentos de todas as fontes e inicializa `count` com zero. O experimento separado de extração usa os mapas existentes para gerar informações semânticas. Não há dependências de execução além da biblioteca padrão do Python 3.11 ou superior.
+Aplicação Python 3.11 ou superior para experimentos científicos de mestrado. O experimento de mapeamento constrói um mapa de **ocorrências de palavras por segmento**, independente de modelos de linguagem. Cada execução explícita de `map` reconstrói `map` em todos os segmentos de todas as fontes e inicializa `count` com zero. A extração usa os mapas existentes para gerar informações semânticas. O agrupamento separado compara essas informações usando embeddings persistidos em PostgreSQL. Mapeamento e extração usam a biblioteca padrão; o adaptador PostgreSQL requer `psycopg[binary]`, instalado com `python -m pip install -e .`.
 
 ## Executar o experimento
 
@@ -167,6 +167,91 @@ Temperatura zero e semente fixa não garantem determinismo. A documentação ofi
 
 Em 25/10/2026, uma consulta de disponibilidade e **uma chamada de geração**, com o segmento atual de 21 palavras, confirmaram acesso a `gpt-6-luna` e aceitação do JSON Schema, temperatura `0`, semente `42` e reasoning `none`. A resposta informou modelo `gpt-6-luna`, sem `system_fingerprint`, e gerou as três informações presentes no dataset. O conteúdo, mapa, contagens e demais metadados foram comparados antes/depois e preservados. Foi uma verificação de integração e estrutura JSON; não houve benchmark nem repetição para medir determinismo. Para comparações futuras, registre versão do código, configuração, dataset, modelo retornado e `system_fingerprint` quando disponível em `InferenceResult`; o experimento padrão não cria um registro automático.
 
+## Experimento separado de agrupamento semântico
+
+`group` lê **cada ocorrência** de `information[*].info` em cada segmento de cada fonte e reconstrói somente `set_different_information`. Não executa mapeamento, extração nem geração de texto. `content`, `map`, `count`, `information` e todos os metadados continuam iguais. Após uma nova extração ou qualquer alteração/concatenação em `information`, execute `group` novamente para atualizar esse resultado derivado.
+
+O padrão de [semantic_grouping.toml](determinism/experiments/configs/semantic_grouping.toml) é OpenAI, `text-embedding-3-small`, limiar `0.85`, lotes de 32 textos e dimensão padrão do modelo (1536 para esse modelo). O banco é uma instância nova e exclusiva do experimento:
+
+```powershell
+python -m pip install -e .
+# Complete o .env existente seguindo .env.example; use uma senha local aleatória.
+docker compose -f compose.semantic-grouping.yaml up -d --wait
+python -m determinism group data/processed/bebe_real_segments.json
+```
+
+O `.env` ignorado contém `OPENAI_API_KEY` e as variáveis `GROUPING_DB_HOST=127.0.0.1`, `GROUPING_DB_PORT=55432`, `GROUPING_DB_NAME=semantic_grouping`, `GROUPING_DB_USER=grouping` e `GROUPING_DB_PASSWORD`. A senha de exemplo deve ser substituída; não versione credenciais. O ambiente tem precedência sobre `.env`. A CLI aceita `--output <arquivo.json>`, `--config <arquivo.toml>` e `--env-file <arquivo.env>`; sem `--output`, substitui a entrada atomicamente após sucesso integral. O diretório de destino deve existir.
+
+O Compose usa a imagem oficial `pgvector/pgvector:0.8.1-pg17`, fixada pelo digest, com container `determinism-grouping-postgres`, volume `determinism-grouping-embeddings` e porta vinculada somente a `127.0.0.1:55432`. Para usar outra porta livre, altere `GROUPING_DB_PORT`. A aplicação inicializa `CREATE EXTENSION IF NOT EXISTS vector` e seu schema/tabelas de forma idempotente. Para interromper e retomar, preservando o volume:
+
+```powershell
+docker compose -f compose.semantic-grouping.yaml stop
+docker compose -f compose.semantic-grouping.yaml start --wait
+```
+
+### Regras e formato
+
+Todo o dataset é validado antes de consultar o cache ou o provedor. Cada segmento precisa de `information` como lista; cada item precisa de `info` não vazio e `context` string UTF-8. Contexto vazio é permitido, e somente `info` é enviado ao provedor. `information: []` produz `set_different_information: []`, sem inferência; a ausência da lista é um erro explícito. `tokens` e campos adicionais permanecem no histórico original, mas não entram na saída do agrupamento:
+
+```json
+"set_different_information": [
+    [
+        {"info": "A casa é verde.", "context": "Qual é a cor da casa?", "avg_similarity": 1.0},
+        {"info": "A casa é verde.", "context": "Como a casa foi descrita?", "avg_similarity": 1.0}
+    ],
+    [{"info": "A casa não tem porta.", "context": "A casa tem porta?", "avg_similarity": 1.0}]
+]
+```
+
+Os grupos formam uma partição: cada ocorrência original aparece exatamente uma vez, inclusive strings idênticas com contextos iguais ou diferentes. Nunca se agrupam informações de segmentos ou fontes diferentes. O cache pode compartilhar o vetor de um texto idêntico, mas a matriz de cossenos compara **todos os pares de ocorrências dentro de cada segmento**. `avg_similarity` é a média dos cossenos do membro com os demais membros de seu grupo, excluindo ele mesmo. Para singleton, `1.0` é uma convenção explícita, pois não há pares.
+
+Um grupo com mais de um membro só é válido se **cada membro** tiver média maior ou igual ao limiar. Começando em singletons, a estratégia mescla o par de grupos viável com maior média entre grupos. Depois revisita os itens em ordem original: cada item escolhe o destino viável de maior média e muda somente se essa média superar estritamente a atual. Um destino é viável quando a inclusão e a remoção do grupo de origem preservam o limiar de todos os membros; singletons e grupos vazios remanescentes são válidos. A afinidade atual de um singleton é zero nessa decisão, enquanto sua média de saída permanece `1.0`.
+
+As passagens continuam até não haver mudança. Empates usam as tuplas de índices originais; grupos e membros são apresentados em ordem de primeira ocorrência. Um validador independente verifica cobertura exata, médias mínimas e ausência de outro destino viável de média estritamente maior. Isso fornece uma partição estável sob essa regra, sem prometer um ótimo global. Ciclos são possíveis: partições repetidas ou mais de `max_moves` movimentos causam `GroupingConvergenceError` e deixam o JSON intacto. Os embeddings já calculados podem continuar no cache para reuso.
+
+### Cache e outros provedores
+
+O schema `semantic_grouping` armazena perfis em `embedding_profiles` e vetores em `embeddings`. A identidade inclui provider, model, endpoint, dimensão solicitada, `encoding_format="float"`, `cache_revision` e texto exato. Metadados e dimensão efetiva são verificados na leitura e na escrita. `vector` sem dimensão fixa permite modelos com dimensões diferentes; um perfil mantém uma única dimensão efetiva. Upserts são transacionais e idempotentes; não há índice ANN, pois a comparação exaustiva acontece por segmento em Python.
+
+pgvector armazena componentes em float32. A aplicação persiste e **relê todos os vetores solicitados antes de calcular similaridades**, inclusive na primeira execução. Assim, a repetição com cache usa a mesma representação numérica; valores no limiar não são arredondados para forçar agrupamentos. Vetores nulos, não finitos, malformados ou com dimensão incorreta são rejeitados.
+
+Para um servidor local com `/v1/embeddings`, copie o TOML e altere:
+
+```toml
+provider = "openai-compatible"
+model = "modelo-local-de-embeddings"
+base_url = "http://127.0.0.1:1234/v1"
+api_key_env = "LOCAL_AI_API_KEY"
+threshold = 0.85
+batch_size = 32
+cache_revision = "pesos-v1"
+# dimensions = 768 # Opcional; o servidor precisa aceitar esse parâmetro.
+```
+
+A credencial é opcional para esse provedor. Altere `cache_revision` ao trocar pesos locais mantendo nome e URL. `dimensions`, quando informado, é enviado sem fallback; caso contrário, usa-se a dimensão padrão retornada pelo modelo. As respostas são restauradas por `data[*].index`, mesmo fora de ordem. O adaptador não trunca textos, omite parâmetros automaticamente, segue redirects ou repete requisições. A API valida os limites de tokens (OpenAI: até 8192 por texto, 300000 por lote e 2048 inputs); excesso gera erro HTTP explícito sem salvar o JSON. O lote padrão de 32 mantém o teto agregado quando cada texto respeita seu limite.
+
+`EmbeddingProvider`, `VectorStore`, `GroupingStrategy` e `DatasetRepository` são portas independentes. Para outro protocolo ou uma biblioteca local, implemente `embed(texts)` retornando uma sequência de vetores numéricos na mesma ordem, atribua um `EmbeddingProfile` fiel ao modelo e injete as implementações:
+
+```python
+from determinism.experiments import group_dataset
+from determinism.modules.semantic_grouping.domain import BestMeanGrouping, EmbeddingProfile
+
+grouped = group_dataset(
+    extracted,
+    provider=local_embedder,
+    vector_store=persistent_vector_store,
+    profile=EmbeddingProfile("local-python", "meu-modelo", "local://meus-pesos", cache_revision="1"),
+    strategy=BestMeanGrouping(max_moves=10000),
+    threshold=0.85,
+)
+```
+
+Um `PostgresVectorStore` construído diretamente deve receber `initialize()` antes do primeiro uso. `grouping_pipeline(...)` compõe somente essa etapa; `SemanticGroupingExperiment(pipeline, repository=...)` permite trocar o pipeline inteiro. `run_grouping(..., config=..., provider=..., vector_store=..., strategy=..., repository=...)` oferece a composição com arquivos. Dependências injetadas não exigem credenciais da OpenAI nem um banco real nos testes offline.
+
+Fontes oficiais: [Embeddings API](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [guia de embeddings](https://developers.openai.com/api/docs/guides/embeddings), [pgvector e Docker](https://github.com/pgvector/pgvector#docker), [instalação do Psycopg](https://www.psycopg.org/install/).
+
+Em 25/10/2026, uma única requisição real de embeddings processou os **3 textos únicos das 6 ocorrências** do dataset atual: vetores de 1536 dimensões persistidos e grupos com 4 e 2 membros. A igualdade profunda dos campos originais foi verificada. Após reiniciar somente o serviço desse experimento, a repetição usou zero chamadas ao provedor e produziu os mesmos bytes JSON. O banco ficou com os 3 vetores reais; as integrações removem somente seus perfis temporários exclusivos.
+
 ## Organização e extensão
 
 O monólito modular segue uma arquitetura orientada a experimentos científicos (Experiment-Driven Architecture). O módulo funcional contém suas regras, caso de uso, portas e adaptadores em diretórios específicos. Os experimentos são unidades explícitas de composição e execução, e o pipeline é reutilizável fora desse módulo:
@@ -186,25 +271,32 @@ determinism/
 │   │   │   └── mapping_stage.py    # Caso de uso, independente da entrada/saída
 │   │   └── adapters/
 │   │       └── json_repository.py # Persistência JSON
-│   └── semantic_extraction/
-│       ├── domain/                # Entradas imutáveis e validação da resposta/mapa
-│       ├── ports/                 # Inferência e persistência substituíveis
-│       ├── application/           # Etapa concorrente com sucesso integral
-│       ├── adapters/              # HTTP compatível, configuração e mensagens
-│       └── assets/                # Sistema e JSON Schema versionados separados
+│   ├── semantic_extraction/
+│   │   ├── domain/                # Entradas imutáveis e validação da resposta/mapa
+│   │   ├── ports/                 # Inferência e persistência substituíveis
+│   │   ├── application/           # Etapa concorrente com sucesso integral
+│   │   ├── adapters/              # HTTP compatível, configuração e mensagens
+│   │   └── assets/                # Sistema e JSON Schema versionados separados
+│   └── semantic_grouping/
+│       ├── domain/                # Validação, cossenos e agrupamento determinístico
+│       ├── ports/                 # Embeddings, cache, estratégia e repositório
+│       ├── application/           # Etapa isolada por segmento, com releitura do cache
+│       └── adapters/              # HTTP embeddings, TOML e PostgreSQL/pgvector
 ├── pipelines/
 │   └── sequential.py              # Pipeline genérico e contrato de etapa
 ├── experiments/
 │   ├── word_mapping.py            # Definição do mapeamento
 │   ├── semantic_extraction.py     # Composição explícita da extração
+│   ├── semantic_grouping.py       # Composição explícita do agrupamento
 │   └── configs/
-│       └── semantic_extraction.toml
+│       ├── semantic_extraction.toml
+│       └── semantic_grouping.toml
 ├── entrypoints/
 │   └── cli.py                    # Interface de linha de comando
 └── __main__.py
 ```
 
-As dependências apontam para as regras internas: `application` usa seu `domain` e suas portas; `adapters` implementa essas portas; `ports` depende somente de tipos internos e da biblioteca padrão. O domínio não conhece arquivos, CLI, experimentos ou adaptadores. Os domínios e aplicações dos dois módulos não importam um ao outro. A composição da extração reutiliza o adaptador JSON existente por compatibilidade estrutural com sua própria porta de persistência, sem acoplar a aplicação ao módulo de mapeamento. `pipelines` só conhece um tipo genérico e objetos chamáveis, sem importar módulos funcionais ou JSON. `experiments` reúne essas peças e `entrypoints` aciona o experimento. O pacote raiz não carrega adaptadores ao importar um componente interno.
+As dependências apontam para as regras internas: `application` usa seu `domain` e suas portas; `adapters` implementa essas portas; `ports` depende somente de tipos internos e da biblioteca padrão. O domínio não conhece arquivos, CLI, experimentos ou adaptadores. Os domínios e aplicações dos três módulos não importam um ao outro. As composições da extração e do agrupamento reutilizam o adaptador JSON existente por compatibilidade estrutural com suas próprias portas de persistência, sem acoplar suas aplicações ao módulo de mapeamento. `pipelines` só conhece um tipo genérico e objetos chamáveis, sem importar módulos funcionais ou JSON. `experiments` reúne essas peças e `entrypoints` aciona o experimento. O pacote raiz não carrega adaptadores ao importar um componente interno.
 
 `WordMappingExperiment` é uma definição executável com `pipeline` e `repository` injetáveis. Sua configuração padrão usa `MappingStage`, `UnicodeWordTokenizer` e `JsonDatasetRepository`; a mesma definição pode ser reutilizada em diferentes datasets. A configuração em Python registra quais implementações e em qual ordem o experimento executa. Não há framework de configuração ou registro automático de resultados nesta primeira etapa.
 
@@ -243,5 +335,15 @@ Erros de estrutura indicam a localização do campo, por exemplo `$[1].segments[
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+Para executar também as integrações contra o banco local configurado (sem chamadas externas de API):
+
+```powershell
+$env:GROUPING_TEST_POSTGRES = "1"
+python -m unittest discover -s tests -p test_postgres_vectors.py -v
+Remove-Item Env:GROUPING_TEST_POSTGRES
+```
+
+Os testes do agrupamento verificam limiar inclusivo, singletons, duplicatas, todos os pares, empates, isolamento por fonte/segmento, preservação dos campos, antiencadeamento, realocação de maior média, ciclos reais e limite de movimentos, cache/invalidação, float32, batching/índices/erros do provedor e atomicidade do JSON. As integrações usam perfis com UUID e removem exclusivamente seus registros no final; verificam pgvector real, persistência, idempotência, dimensões e a CLI com servidor HTTP local.
 
 Os testes são offline e não requerem chave de API. Cobrem o exemplo de oito palavras, múltiplas fontes e segmentos, substituição de mapas, reinicialização de `count`, pontuação, caixa, acentos, Unicode, repetições, vazios, preservação dos dados, reuso por identidade em memória e pipeline genérico. A extração cobre concorrência realmente simultânea com conclusão fora de ordem, limite de tarefas, parada independente por segmento, contagem por informação, concatenação de duplicatas, retomada do histórico com contagens antigas, segmentos já cobertos sem chamadas, imutabilidade dos dados, mapas/histórico inválidos antes de qualquer chamada, mapas vazios e de um token, falha de cobertura no limite sem persistir resultados parciais, validação estrita dos IDs/respostas, separação sistema/dados/schema, escapes, propagação da configuração, respostas recusadas/truncadas/inválidas, erros HTTP sanitizados sem retries, provedores/pipelines/repositórios alternativos e proteção atômica de arquivos. Um servidor HTTP local simulado verifica sucesso e falha do fluxo completo da CLI com configuração compatível.

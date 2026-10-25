@@ -1,0 +1,22 @@
+name: determinism-grouping
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17@sha256:3e8b3adfd27b5707128f60956f62a793c3c9326ea8cfaf0eab7adccb5d700b21
+    container_name: determinism-grouping-postgres
+    environment:
+      POSTGRES_DB: ${GROUPING_DB_NAME:-semantic_grouping}
+      POSTGRES_USER: ${GROUPING_DB_USER:-grouping}
+      POSTGRES_PASSWORD: ${GROUPING_DB_PASSWORD:?Set GROUPING_DB_PASSWORD in ignored .env}
+    ports:
+      - "127.0.0.1:${GROUPING_DB_PORT:-55432}:5432"
+    volumes:
+      - grouping-embeddings:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+volumes:
+  grouping-embeddings:
+    name: determinism-grouping-embeddings
