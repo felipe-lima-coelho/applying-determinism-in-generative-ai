@@ -110,7 +110,68 @@
                         "word": "dias",
                         "count": 0
                     }
-                }
+                },
+                "information": [
+                    {
+                        "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Acontecimento envolvendo os pais e o filho; responde quem apareceu em público e com quem."
+                    },
+                    {
+                        "info": "A aparição pública do Príncipe Harry e da Duquesa Meghan Markle com o filho ocorreu pela primeira vez.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Informação temporal sobre a aparição; responde se aquela foi a primeira vez que apareceram em público com o filho."
+                    },
+                    {
+                        "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20
+                        ],
+                        "context": "Fato sobre o nascimento e sua recência; responde quando nasceu o filho."
+                    }
+                ]
             }
         ]
     }

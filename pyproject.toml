@@ -14,3 +14,7 @@ determinism = "determinism.entrypoints.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["determinism*"]
+
+[tool.setuptools.package-data]
+"determinism.modules.semantic_extraction" = ["assets/*.txt", "assets/*.json"]
+"determinism.experiments" = ["configs/*.toml"]

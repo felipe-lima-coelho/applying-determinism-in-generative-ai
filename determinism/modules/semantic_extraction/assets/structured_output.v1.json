@@ -1,0 +1,38 @@
+{
+    "type": "json_schema",
+    "name": "extracao_semantica",
+    "strict": true,
+    "schema": {
+        "type": "object",
+        "description": "Resultado da extração de unidades informacionais de um trecho.",
+        "properties": {
+            "informacoes": {
+                "type": "array",
+                "description": "Informações semânticas distintas identificadas no trecho.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "info": {
+                            "type": "string",
+                            "description": "Afirmação semanticamente completa, autossuficiente e sustentada pelo texto."
+                        },
+                        "tokens": {
+                            "type": "array",
+                            "description": "IDs das palavras que sustentam a informação, em ordem crescente, sem repetições e com pelo menos dois IDs distintos.",
+                            "items": {"type": "integer"},
+                            "minItems": 2
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Natureza da informação e tipo de pergunta que a afirmação pode responder."
+                        }
+                    },
+                    "required": ["info", "tokens", "context"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["informacoes"],
+        "additionalProperties": false
+    }
+}
