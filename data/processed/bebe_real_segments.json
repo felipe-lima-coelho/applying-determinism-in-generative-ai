@@ -8,107 +8,107 @@
                     "0": {
                         "token": 0,
                         "word": "Príncipe",
-                        "count": 0
+                        "count": 6
                     },
                     "1": {
                         "token": 1,
                         "word": "Harry",
-                        "count": 0
+                        "count": 6
                     },
                     "2": {
                         "token": 2,
                         "word": "e",
-                        "count": 0
+                        "count": 6
                     },
                     "3": {
                         "token": 3,
                         "word": "a",
-                        "count": 0
+                        "count": 6
                     },
                     "4": {
                         "token": 4,
                         "word": "Duquesa",
-                        "count": 0
+                        "count": 6
                     },
                     "5": {
                         "token": 5,
                         "word": "Meghan",
-                        "count": 0
+                        "count": 6
                     },
                     "6": {
                         "token": 6,
                         "word": "Markle",
-                        "count": 0
+                        "count": 6
                     },
                     "7": {
                         "token": 7,
                         "word": "apareceram",
-                        "count": 0
+                        "count": 4
                     },
                     "8": {
                         "token": 8,
                         "word": "em",
-                        "count": 0
+                        "count": 2
                     },
                     "9": {
                         "token": 9,
                         "word": "público",
-                        "count": 0
+                        "count": 2
                     },
                     "10": {
                         "token": 10,
                         "word": "pela",
-                        "count": 0
+                        "count": 2
                     },
                     "11": {
                         "token": 11,
                         "word": "primeira",
-                        "count": 0
+                        "count": 2
                     },
                     "12": {
                         "token": 12,
                         "word": "vez",
-                        "count": 0
+                        "count": 2
                     },
                     "13": {
                         "token": 13,
                         "word": "com",
-                        "count": 0
+                        "count": 4
                     },
                     "14": {
                         "token": 14,
                         "word": "o",
-                        "count": 0
+                        "count": 6
                     },
                     "15": {
                         "token": 15,
                         "word": "filho",
-                        "count": 0
+                        "count": 6
                     },
                     "16": {
                         "token": 16,
                         "word": "que",
-                        "count": 0
+                        "count": 2
                     },
                     "17": {
                         "token": 17,
                         "word": "nasceu",
-                        "count": 0
+                        "count": 2
                     },
                     "18": {
                         "token": 18,
                         "word": "há",
-                        "count": 0
+                        "count": 2
                     },
                     "19": {
                         "token": 19,
                         "word": "dois",
-                        "count": 0
+                        "count": 2
                     },
                     "20": {
                         "token": 20,
                         "word": "dias",
-                        "count": 0
+                        "count": 2
                     }
                 },
                 "information": [
@@ -129,7 +129,7 @@
                             14,
                             15
                         ],
-                        "context": "Acontecimento envolvendo os pais e o filho; responde quem apareceu em público e com quem."
+                        "context": "Ação e participantes; responde quem apareceu em público e com quem."
                     },
                     {
                         "info": "A aparição pública do Príncipe Harry e da Duquesa Meghan Markle com o filho ocorreu pela primeira vez.",
@@ -149,7 +149,7 @@
                             14,
                             15
                         ],
-                        "context": "Informação temporal sobre a aparição; responde se aquela foi a primeira vez que apareceram em público com o filho."
+                        "context": "Caracterização temporal da aparição; responde se essa foi a primeira vez que apareceram em público com o filho."
                     },
                     {
                         "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
@@ -169,7 +169,66 @@
                             19,
                             20
                         ],
-                        "context": "Fato sobre o nascimento e sua recência; responde quando nasceu o filho."
+                        "context": "Nascimento e tempo decorrido; responde quando o filho nasceu."
+                    },
+                    {
+                        "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Ação e companhia: responde quem apareceu em público e com quem."
+                    },
+                    {
+                        "info": "A aparição pública do Príncipe Harry e da Duquesa Meghan Markle com o filho ocorreu pela primeira vez.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Caracterização temporal da aparição: responde se essa foi a primeira vez que apareceram em público com o filho."
+                    },
+                    {
+                        "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20
+                        ],
+                        "context": "Nascimento e tempo decorrido: responde quando o filho nasceu."
                     }
                 ]
             }
