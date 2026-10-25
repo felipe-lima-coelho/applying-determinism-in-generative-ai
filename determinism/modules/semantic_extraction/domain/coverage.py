@@ -1,0 +1,32 @@
+"""Contagem determinística das referências validadas de cada ocorrência textual."""
+
+from .contracts import ExtractionError, Information, SegmentInput
+
+
+MIN_TOKEN_COVERAGE = 2
+
+
+class IncompleteCoverageError(ExtractionError):
+    """A cobertura mínima não pôde ser atingida; o resultado não deve ser salvo."""
+
+
+def add_information_counts(counts: dict[int, int], information: list[Information]) -> None:
+    """Cada ID distinto de cada informação validada contribui exatamente uma vez."""
+    for item in information:
+        for token in item["tokens"]:
+            counts[token] += 1
+
+
+def count_information(segment: SegmentInput, information: list[Information]) -> dict[int, int]:
+    """O histórico completo é a fonte de verdade, independentemente de count antigo."""
+    counts = {entry.token: 0 for entry in segment.tokens}
+    add_information_counts(counts, information)
+    return counts
+
+
+def validate_coverage_feasibility(segment: SegmentInput) -> None:
+    if len(segment.tokens) == 1:
+        raise IncompleteCoverageError(
+            f"{segment.path}: cobertura impossível para um mapa com somente um token; "
+            "cada informação exige pelo menos dois IDs distintos presentes no mapa."
+        )

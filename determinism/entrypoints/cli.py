@@ -21,7 +21,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         help="Arquivo de destino. Por padrão, substitui a entrada após concluir o mapeamento.",
     )
-    extraction = commands.add_parser("extract", help="Extrai information usando os mapas existentes, sem remapear.")
+    extraction = commands.add_parser("extract", help="Acumula information até cada token ter pelo menos duas referências.")
     extraction.add_argument("input", type=Path, help="Dataset JSON já mapeado.")
     extraction.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada após sucesso total.")
     extraction.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_extraction.toml.")
@@ -46,5 +46,5 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Mapeamento salvo em {destination} (fontes: {len(dataset)}, segmentos: {segments}, palavras: {tokens})")
     else:
         information = sum(len(segment["information"]) for source in dataset for segment in source["segments"])
-        print(f"Extração salva em {destination} (fontes: {len(dataset)}, segmentos: {segments}, informações: {information})")
+        print(f"Extração salva em {destination} (fontes: {len(dataset)}, segmentos: {segments}, informações acumuladas: {information})")
     return 0

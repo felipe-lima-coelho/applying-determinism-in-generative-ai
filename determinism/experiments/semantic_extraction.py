@@ -13,8 +13,10 @@ from ..modules.text_mapping.adapters import JsonDatasetRepository
 from ..pipelines import Pipeline
 
 
-def extraction_pipeline(provider: InferenceProvider, *, max_concurrency: int = 4) -> Pipeline[Dataset]:
-    return Pipeline((ExtractionStage(provider, max_concurrency),))
+def extraction_pipeline(
+    provider: InferenceProvider, *, max_concurrency: int = 4, max_generations_per_segment: int = 10,
+) -> Pipeline[Dataset]:
+    return Pipeline((ExtractionStage(provider, max_concurrency, max_generations_per_segment),))
 
 
 @dataclass(frozen=True)
@@ -33,8 +35,13 @@ class SemanticExtractionExperiment:
         return extracted
 
 
-def extract_dataset(dataset: Dataset, *, provider: InferenceProvider, max_concurrency: int = 4) -> Dataset:
-    return extraction_pipeline(provider, max_concurrency=max_concurrency).run(dataset)
+def extract_dataset(
+    dataset: Dataset, *, provider: InferenceProvider, max_concurrency: int = 4,
+    max_generations_per_segment: int = 10,
+) -> Dataset:
+    return extraction_pipeline(
+        provider, max_concurrency=max_concurrency, max_generations_per_segment=max_generations_per_segment,
+    ).run(dataset)
 
 
 def run_extraction(
@@ -51,7 +58,10 @@ def run_extraction(
         selected_config, read_api_key(selected_config, env_file),
     )
     experiment = SemanticExtractionExperiment(
-        extraction_pipeline(selected_provider, max_concurrency=selected_config.max_concurrency),
+        extraction_pipeline(
+            selected_provider, max_concurrency=selected_config.max_concurrency,
+            max_generations_per_segment=selected_config.max_generations_per_segment,
+        ),
         repository if repository is not None else JsonDatasetRepository(),
     )
     return experiment.run(input_path, output_path)

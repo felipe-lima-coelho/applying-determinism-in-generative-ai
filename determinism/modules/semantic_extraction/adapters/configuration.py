@@ -27,6 +27,7 @@ class ExtractionConfig:
     timeout_seconds: float = 60.0
     max_completion_tokens: int = 4096
     api_key_env: str = "OPENAI_API_KEY"
+    max_generations_per_segment: int = 10
 
     def __post_init__(self) -> None:
         if self.provider not in ("openai", "openai-compatible"):
@@ -46,6 +47,8 @@ class ExtractionConfig:
             raise ConfigurationError("provider='openai' exige HTTPS em api.openai.com; use openai-compatible para outro servidor.")
         if type(self.max_concurrency) is not int or not 1 <= self.max_concurrency <= 256:
             raise ConfigurationError("max_concurrency deve ser um inteiro entre 1 e 256.")
+        if type(self.max_generations_per_segment) is not int or self.max_generations_per_segment < 1:
+            raise ConfigurationError("max_generations_per_segment deve ser um inteiro positivo.")
         if type(self.temperature) not in (int, float) or not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2:
             raise ConfigurationError("temperature deve ser um número finito entre 0 e 2.")
         if type(self.seed) is not int or not -(2**63) <= self.seed < 2**63:
