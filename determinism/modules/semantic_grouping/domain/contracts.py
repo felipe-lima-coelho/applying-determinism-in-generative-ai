@@ -143,20 +143,12 @@ def validate_partition(partition: Partition, matrix: SimilarityMatrix, threshold
     if any(type(index) is not int for index in indices) or sorted(indices) != list(range(len(matrix))):
         raise GroupingError("Estratégia deve particionar cada ocorrência exatamente uma vez.")
     for group in partition:
-        if any(member_mean(index, group, matrix) < threshold for index in group):
-            raise GroupingError("Estratégia retornou grupo abaixo da similaridade média mínima por membro.")
-    # Verificação final independente da busca: não pode restar um movimento viável melhor.
-    for source in partition:
-        for index in source:
-            current = member_mean(index, source, matrix) if len(source) > 1 else 0.0
-            remainder = tuple(other for other in source if other != index)
-            if any(member_mean(other, remainder, matrix) < threshold for other in remainder):
-                continue
-            for destination in partition:
-                if destination == source:
-                    continue
-                score = math.fsum(matrix[index][other] for other in destination) / len(destination)
-                union = tuple((*destination, index))
-                if score > current and all(member_mean(other, union, matrix) >= threshold for other in union):
-                    raise GroupingError("Estratégia deixou uma ocorrência fora de seu destino viável de maior média.")
+        for position, first in enumerate(group):
+            if any(matrix[first][second] < threshold for second in group[position + 1:]):
+                raise GroupingError("Estratégia retornou grupo com um par abaixo do limiar de complete linkage.")
+    # Verificação final independente: nenhuma fusão complete linkage elegível pode restar.
+    for position, first in enumerate(partition):
+        for second in partition[position + 1:]:
+            if all(matrix[a][b] >= threshold for a in first for b in second):
+                raise GroupingError("Estratégia deixou uma fusão complete linkage elegível entre grupos.")
     return cast(Partition, partition)

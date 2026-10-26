@@ -8,5 +8,4 @@ timeout_seconds = 60.0
 api_key_env = "OPENAI_API_KEY"
 # Altere ao substituir os pesos de um servidor local sem mudar o nome/URL.
 cache_revision = "1"
-max_moves = 10000
 # dimensions = 1536 # Opcional; omitir usa a dimensão padrão do modelo.

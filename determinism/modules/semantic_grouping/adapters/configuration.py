@@ -28,7 +28,6 @@ class GroupingConfig:
     timeout_seconds: float = 60.0
     api_key_env: str = "OPENAI_API_KEY"
     cache_revision: str = "1"
-    max_moves: int = 10000
 
     def __post_init__(self) -> None:
         if self.provider not in ("openai", "openai-compatible"):
@@ -56,8 +55,6 @@ class GroupingConfig:
             raise GroupingConfigurationError("api_key_env deve nomear uma variável de ambiente.")
         if not isinstance(self.cache_revision, str) or not self.cache_revision.strip():
             raise GroupingConfigurationError("cache_revision deve ser uma string não vazia.")
-        if type(self.max_moves) is not int or self.max_moves < 1:
-            raise GroupingConfigurationError("max_moves deve ser um inteiro positivo.")
         try:
             self.profile
         except GroupingError:

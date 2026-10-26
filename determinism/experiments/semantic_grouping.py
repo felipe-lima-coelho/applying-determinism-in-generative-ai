@@ -8,7 +8,7 @@ from ..modules.semantic_grouping.adapters import (
     read_embedding_api_key, read_postgres_settings,
 )
 from ..modules.semantic_grouping.application import GroupingStage
-from ..modules.semantic_grouping.domain import BestMeanGrouping, Dataset, EmbeddingProfile, validate_information_dataset
+from ..modules.semantic_grouping.domain import CompleteLinkageGrouping, Dataset, EmbeddingProfile, validate_information_dataset
 from ..modules.semantic_grouping.ports import DatasetRepository, EmbeddingProvider, GroupingStrategy, VectorStore
 from ..modules.text_mapping.adapters import JsonDatasetRepository
 from ..pipelines import Pipeline
@@ -16,9 +16,9 @@ from ..pipelines import Pipeline
 
 def grouping_pipeline(
     provider: EmbeddingProvider, vector_store: VectorStore, profile: EmbeddingProfile, *,
-    strategy: GroupingStrategy | None = None, threshold: float = 0.85, max_moves: int = 10000,
+    strategy: GroupingStrategy | None = None, threshold: float = 0.85,
 ) -> Pipeline[Dataset]:
-    return Pipeline((GroupingStage(provider, vector_store, profile, strategy if strategy is not None else BestMeanGrouping(max_moves), threshold),))
+    return Pipeline((GroupingStage(provider, vector_store, profile, strategy if strategy is not None else CompleteLinkageGrouping(), threshold),))
 
 
 @dataclass(frozen=True)
@@ -40,9 +40,9 @@ class SemanticGroupingExperiment:
 def group_dataset(
     dataset: Dataset, *, provider: EmbeddingProvider, vector_store: VectorStore,
     profile: EmbeddingProfile, strategy: GroupingStrategy | None = None,
-    threshold: float = 0.85, max_moves: int = 10000,
+    threshold: float = 0.85,
 ) -> Dataset:
-    return grouping_pipeline(provider, vector_store, profile, strategy=strategy, threshold=threshold, max_moves=max_moves).run(dataset)
+    return grouping_pipeline(provider, vector_store, profile, strategy=strategy, threshold=threshold).run(dataset)
 
 
 def run_grouping(
@@ -75,7 +75,7 @@ def run_grouping(
         experiment = SemanticGroupingExperiment(
             grouping_pipeline(
                 selected_provider, selected_store, selected_config.profile,
-                strategy=strategy, threshold=selected_config.threshold, max_moves=selected_config.max_moves,
+                strategy=strategy, threshold=selected_config.threshold,
             ), selected_repository,
         )
         grouped = experiment.group(dataset)

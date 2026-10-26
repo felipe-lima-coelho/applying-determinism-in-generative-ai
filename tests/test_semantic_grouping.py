@@ -13,23 +13,15 @@ from determinism.experiments import SemanticGroupingExperiment, group_dataset, g
 from determinism.modules.semantic_grouping.adapters import GroupingConfig
 from determinism.modules.semantic_grouping.adapters.postgres_vectors import canonical_float32
 from determinism.modules.semantic_grouping.domain import (
-    BestMeanGrouping, GroupingConvergenceError, GroupingError, cosine_matrix,
+    CompleteLinkageGrouping, GroupingError, cosine_matrix,
     member_mean, validate_information_dataset, validate_partition,
 )
-from determinism.modules.semantic_grouping.domain.grouping import agglomerate
 from determinism.modules.semantic_grouping.ports import EmbeddingError, VectorStoreError
 from determinism.pipelines import Pipeline
 
 
-RELOCATION_VECTORS = (
-    (0.9201474412794594, -0.07183314667841126, -0.21214792324866874, -0.32118833105581374),
-    (0.8967071282309063, 0.11411083029053949, 0.03757132368191618, -0.42600873257138),
-    (0.833412189018612, -0.30132401651171575, -0.3718958126683185, -0.2762633974818661),
-    (0.9142131185707967, -0.3201892053340204, -0.24260648105457325, 0.053247929264377304),
-)
-
-# Gram matrix PSD real: respostas de melhor média podem entrar em ciclo.
-CYCLE_VECTORS = (
+# Este caso entrava em ciclo com realocação; complete linkage só faz fusões.
+PREVIOUS_CYCLE_VECTORS = (
     (1.0, -0.07871239057564743, 0.09367055784785899, -0.23204513472594998, 0.14729004528473894),
     (1.0, -0.2268006655763914, 0.02861044447852092, 0.06588306718453929, -0.16145721369184335),
     (1.0, 0.33335443637621154, 0.3690262763595806, 0.09284515899167771, 0.06783925275781338),
@@ -79,7 +71,7 @@ class FakeEmbeddings:
 
 class GroupingDomainTests(unittest.TestCase):
     def test_inclusive_threshold_boundary_singleton_empty_and_identical_occurrences(self):
-        strategy = BestMeanGrouping()
+        strategy = CompleteLinkageGrouping()
         self.assertEqual(strategy.partition((), .85), ())
         self.assertEqual(strategy.partition(((1.0,),), .85), ((0,),))
         self.assertEqual(strategy.partition(((1, .85), (.85, 1)), .85), ((0, 1),))
@@ -90,41 +82,51 @@ class GroupingDomainTests(unittest.TestCase):
 
     def test_chaining_is_rejected_and_ties_follow_original_occurrence_order(self):
         matrix = ((1, .9, .7), (.9, 1, .9), (.7, .9, 1))
-        self.assertEqual(BestMeanGrouping().partition(matrix, .85), ((0, 1), (2,)))
+        self.assertEqual(CompleteLinkageGrouping().partition(matrix, .85), ((0, 1), (2,)))
         for _ in range(5):
-            self.assertEqual(BestMeanGrouping().partition(matrix, .85), ((0, 1), (2,)))
+            self.assertEqual(CompleteLinkageGrouping().partition(matrix, .85), ((0, 1), (2,)))
         with self.assertRaises(GroupingError):
             validate_partition(((0, 1, 2),), matrix, .85)
 
-    def test_relocation_revisits_an_ambiguous_member_and_chooses_highest_mean(self):
-        matrix = cosine_matrix(RELOCATION_VECTORS)
-        self.assertEqual(agglomerate(matrix, .85), ((0, 2, 3), (1,)))
-        result = BestMeanGrouping().partition(matrix, .85)
-        self.assertEqual(result, ((0, 1), (2, 3)))
-        self.assertGreater(matrix[0][1], (matrix[0][2] + matrix[0][3]) / 2)
-        with self.assertRaisesRegex(GroupingError, "maior média"):
-            validate_partition(((0, 2, 3), (1,)), matrix, .85)
-        # Verificação independente das médias finais, sem usar o helper da busca.
-        for group in result:
-            for index in group:
-                self.assertGreaterEqual(sum(matrix[index][other] for other in group if other != index) / (len(group) - 1), .85)
+    def test_every_mean_can_pass_while_one_pair_blocks_the_merge(self):
+        matrix = ((1, .96, .90), (.96, 1, .84), (.90, .84, 1))
+        self.assertTrue(all(member_mean(index, (0, 1, 2), matrix) >= .85 for index in range(3)))
+        # A decisão não consulta a média, que continua apenas descritiva.
+        with patch("determinism.modules.semantic_grouping.domain.contracts.member_mean", side_effect=AssertionError("membership cannot use means")):
+            result = CompleteLinkageGrouping().partition(matrix, .85)
+        self.assertEqual(result, ((0, 1), (2,)))
+        with self.assertRaisesRegex(GroupingError, "par abaixo"):
+            validate_partition(((0, 1, 2),), matrix, .85)
 
-    def test_source_remainder_must_stay_valid_before_moving_a_member(self):
-        # 0 preferiria 3, mas sua remoção deixaria 1 e 2 abaixo do limiar.
-        matrix = ((1, .95, .95, .99), (.95, 1, .76, .1), (.95, .76, 1, .1), (.99, .1, .1, 1))
-        self.assertEqual(validate_partition(((0, 1, 2), (3,)), matrix, .85), ((0, 1, 2), (3,)))
+    def test_merge_priority_is_maximum_cross_minimum_rather_than_cross_mean(self):
+        vectors = tuple((math.cos(math.radians(angle)), math.sin(math.radians(angle))) for angle in (0, 5, 12, 23))
+        matrix = cosine_matrix(vectors)
+        self.assertGreater((matrix[0][2] + matrix[1][2]) / 2, matrix[2][3])
+        self.assertLess(min(matrix[0][2], matrix[1][2]), matrix[2][3])
+        self.assertEqual(CompleteLinkageGrouping().partition(matrix, .95), ((0, 1), (2, 3)))
 
-    def test_cycle_on_real_vectors_is_an_explicit_failure_including_float32(self):
-        for vectors in (CYCLE_VECTORS, tuple(canonical_float32(vector) for vector in CYCLE_VECTORS)):
-            with self.subTest(precision=vectors is CYCLE_VECTORS), self.assertRaisesRegex(GroupingConvergenceError, "repetiu"):
-                BestMeanGrouping().partition(cosine_matrix(vectors), .85)
+    def test_previous_cycle_fixture_finishes_with_complete_linkage(self):
+        for vectors in (PREVIOUS_CYCLE_VECTORS, tuple(canonical_float32(vector) for vector in PREVIOUS_CYCLE_VECTORS)):
+            matrix = cosine_matrix(vectors)
+            result = CompleteLinkageGrouping().partition(matrix, .85)
+            self.assertEqual(sorted(index for group in result for index in group), list(range(len(vectors))))
+            for group in result:
+                for position, first in enumerate(group):
+                    self.assertTrue(all(matrix[first][second] >= .85 for second in group[position + 1:]))
 
-    def test_move_limit_prevents_partial_output(self):
-        vectors = tuple(tuple(vector) + (0,) * 4 for vector in RELOCATION_VECTORS)
-        vectors += tuple((0,) * 4 + tuple(vector) for vector in RELOCATION_VECTORS)
-        with self.assertRaisesRegex(GroupingConvergenceError, "max_moves"):
-            BestMeanGrouping(max_moves=1).partition(cosine_matrix(vectors), .85)
-        self.assertEqual(BestMeanGrouping(max_moves=2).partition(cosine_matrix(vectors), .85), ((0, 1), (2, 3), (4, 5), (6, 7)))
+    def test_final_partition_cannot_leave_an_eligible_complete_linkage_merge(self):
+        matrix = ((1, .9, .7), (.9, 1, .7), (.7, .7, 1))
+        with self.assertRaisesRegex(GroupingError, "fusão complete linkage elegível"):
+            validate_partition(((0,), (1,), (2,)), matrix, .85)
+        self.assertEqual(validate_partition(((0, 1), (2,)), matrix, .85), ((0, 1), (2,)))
+
+    def test_each_cosine_pair_is_computed_once_and_strategy_reuses_the_matrix(self):
+        vectors = ((1, 0), (1, 0), (0, 1), (-1, 0))
+        with patch("determinism.modules.semantic_grouping.domain.contracts.math.fsum", wraps=math.fsum) as sums:
+            matrix = cosine_matrix(vectors)
+        self.assertEqual(sums.call_count, len(vectors) * (len(vectors) - 1) // 2)
+        with patch("determinism.modules.semantic_grouping.domain.contracts.math.fsum", side_effect=AssertionError("cosines and means must not be recomputed")):
+            self.assertEqual(CompleteLinkageGrouping().partition(matrix, .85), ((0, 1), (2,), (3,)))
 
     def test_partition_validation_rejects_dropped_duplicated_empty_and_bad_members(self):
         matrix = ((1, 0), (0, 1))
@@ -192,6 +194,14 @@ class GroupingApplicationTests(unittest.TestCase):
         self.assertFalse(self.provider.calls)
         self.assertFalse(self.store.fetches)
 
+    def test_each_segment_builds_one_pair_matrix_reused_for_grouping_and_output(self):
+        value = dataset(["A", "B", "A", "C"], ["A"])
+        with patch("determinism.modules.semantic_grouping.application.grouping_stage.cosine_matrix", wraps=cosine_matrix) as matrices:
+            result = self.group(value)
+        self.assertEqual(matrices.call_count, 2)
+        self.assertEqual([len(call.args[0]) for call in matrices.call_args_list], [4, 1])
+        self.assertEqual([len(segment["set_different_information"]) for segment in result[0]["segments"]], [2, 1])
+
     def test_all_information_is_prevalidated_before_any_cache_or_provider_call(self):
         for invalid in (None, {}, [{"info": "", "context": "ok"}], [{"info": "A"}], [{"info": "A", "context": 3}], [{"info": "A\x00", "context": "ok"}], [{"info": "A", "context": "\ud800"}]):
             value = dataset(["A"], [])
@@ -236,7 +246,7 @@ class GroupingApplicationTests(unittest.TestCase):
         class Invalid:
             def partition(self, matrix, threshold):
                 return ((0,), (1,), (2,))
-        with self.assertRaisesRegex(GroupingError, "maior média"):
+        with self.assertRaisesRegex(GroupingError, "fusão complete linkage elegível"):
             self.group(dataset(["A", "B", "C"]), strategy=Invalid())
 
 
@@ -279,15 +289,19 @@ class GroupingPersistenceTests(unittest.TestCase):
             # O cache pode sobreviver à falha da escrita, evitando nova inferência.
             self.assertTrue(self.store.rows)
 
-    def test_cycle_failure_preserves_json_and_durable_computation(self):
+    def test_invalid_complete_linkage_partition_preserves_json_and_durable_computation(self):
         with TemporaryDirectory() as directory:
-            source = Path(directory) / "cycle.json"
-            texts = [str(index) for index in range(len(CYCLE_VECTORS))]
+            source = Path(directory) / "invalid-grouping.json"
+            texts = ["A", "B", "C"]
             source.write_text(json.dumps(dataset(texts)), encoding="utf-8")
             before = source.read_bytes()
-            provider = FakeEmbeddings(dict(zip(texts, CYCLE_VECTORS)))
-            with self.assertRaises(GroupingConvergenceError):
-                run_grouping(source, provider=provider, vector_store=self.store)
+            third_y = (.84 - .96 * .90) / .28
+            provider = FakeEmbeddings({"A": (1, 0, 0), "B": (.96, .28, 0), "C": (.90, third_y, math.sqrt(1 - .90**2 - third_y**2))})
+            class InvalidMeanBasedStrategy:
+                def partition(self, matrix, threshold):
+                    return ((0, 1, 2),)
+            with self.assertRaisesRegex(GroupingError, "par abaixo"):
+                run_grouping(source, provider=provider, vector_store=self.store, strategy=InvalidMeanBasedStrategy())
             self.assertEqual(source.read_bytes(), before)
             self.assertEqual(len(self.store.rows), len(texts))
 

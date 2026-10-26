@@ -203,11 +203,11 @@ Todo o dataset é validado antes de consultar o cache ou o provedor. Cada segmen
 ]
 ```
 
-Os grupos formam uma partição: cada ocorrência original aparece exatamente uma vez, inclusive strings idênticas com contextos iguais ou diferentes. Nunca se agrupam informações de segmentos ou fontes diferentes. O cache pode compartilhar o vetor de um texto idêntico, mas a matriz de cossenos compara **todos os pares de ocorrências dentro de cada segmento**. `avg_similarity` é a média dos cossenos do membro com os demais membros de seu grupo, excluindo ele mesmo. Para singleton, `1.0` é uma convenção explícita, pois não há pares.
+Os grupos formam uma partição: cada ocorrência original aparece exatamente uma vez, inclusive strings idênticas com contextos iguais ou diferentes. Nunca se agrupam informações de segmentos ou fontes diferentes. O cache pode compartilhar o vetor de um texto idêntico, mas a matriz de cossenos compara **todos os pares de ocorrências dentro de cada segmento**. Essa matriz é calculada uma vez e guardada em memória para as fusões, validação e descrição dos grupos. `avg_similarity` é somente uma medida descritiva: a média dos cossenos do membro com os demais membros de seu grupo, excluindo ele mesmo. Para singleton, `1.0` é uma convenção explícita, pois não há pares.
 
-Um grupo com mais de um membro só é válido se **cada membro** tiver média maior ou igual ao limiar. Começando em singletons, a estratégia mescla o par de grupos viável com maior média entre grupos. Depois revisita os itens em ordem original: cada item escolhe o destino viável de maior média e muda somente se essa média superar estritamente a atual. Um destino é viável quando a inclusão e a remoção do grupo de origem preservam o limiar de todos os membros; singletons e grupos vazios remanescentes são válidos. A afinidade atual de um singleton é zero nessa decisão, enquanto sua média de saída permanece `1.0`.
+A estratégia padrão é o **agrupamento hierárquico aglomerativo por complete linkage**. Cada ocorrência começa em seu próprio singleton. A similaridade entre dois grupos é o **menor cosseno entre todos os seus pares cruzados**; em cada etapa, funde-se o par de grupos com a maior dessas similaridades, desde que ela seja maior ou igual ao limiar. Assim, todo par dentro de um grupo final precisa atingir `0.85` na configuração padrão. Uma média alta nunca permite incluir um par abaixo do limiar, e `avg_similarity` não controla a participação no grupo.
 
-As passagens continuam até não haver mudança. Empates usam as tuplas de índices originais; grupos e membros são apresentados em ordem de primeira ocorrência. Um validador independente verifica cobertura exata, médias mínimas e ausência de outro destino viável de média estritamente maior. Isso fornece uma partição estável sob essa regra, sem prometer um ótimo global. Ciclos são possíveis: partições repetidas ou mais de `max_moves` movimentos causam `GroupingConvergenceError` e deixam o JSON intacto. Os embeddings já calculados podem continuar no cache para reuso.
+O processo termina quando nenhuma fusão elegível resta. Cada fusão reduz o número de grupos em um; com `n` ocorrências, há no máximo `n - 1` fusões. Empates usam as tuplas ordenadas de índices originais; grupos e membros são apresentados em ordem de primeira ocorrência. Um validador independente verifica a partição exata, todos os pares internos e a ausência de fusões complete linkage elegíveis entre os grupos finais. A sequência hierárquica é determinística para uma mesma matriz e limiar, sem prometer o menor número possível de grupos.
 
 ### Cache e outros provedores
 
@@ -234,14 +234,14 @@ A credencial é opcional para esse provedor. Altere `cache_revision` ao trocar p
 
 ```python
 from determinism.experiments import group_dataset
-from determinism.modules.semantic_grouping.domain import BestMeanGrouping, EmbeddingProfile
+from determinism.modules.semantic_grouping.domain import CompleteLinkageGrouping, EmbeddingProfile
 
 grouped = group_dataset(
     extracted,
     provider=local_embedder,
     vector_store=persistent_vector_store,
     profile=EmbeddingProfile("local-python", "meu-modelo", "local://meus-pesos", cache_revision="1"),
-    strategy=BestMeanGrouping(max_moves=10000),
+    strategy=CompleteLinkageGrouping(),
     threshold=0.85,
 )
 ```
@@ -251,6 +251,8 @@ Um `PostgresVectorStore` construído diretamente deve receber `initialize()` ant
 Fontes oficiais: [Embeddings API](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [guia de embeddings](https://developers.openai.com/api/docs/guides/embeddings), [pgvector e Docker](https://github.com/pgvector/pgvector#docker), [instalação do Psycopg](https://www.psycopg.org/install/).
 
 Em 25/10/2026, uma única requisição real de embeddings processou os **3 textos únicos das 6 ocorrências** do dataset atual: vetores de 1536 dimensões persistidos e grupos com 4 e 2 membros. A igualdade profunda dos campos originais foi verificada. Após reiniciar somente o serviço desse experimento, a repetição usou zero chamadas ao provedor e produziu os mesmos bytes JSON. O banco ficou com os 3 vetores reais; as integrações removem somente seus perfis temporários exclusivos.
+
+Com complete linkage e esses mesmos vetores, o resultado continua contendo **6 ocorrências em grupos de 4 e 2**: o cosseno entre os textos A e B é `0.8853809907660802`, acima de `0.85`; A–C e B–C são `0.7220780303650856` e `0.6829254158505015`. Portanto, A e B e suas repetições podem compartilhar um grupo; C e sua repetição ficam no outro. O limiar e os dados originais permanecem iguais.
 
 ## Organização e extensão
 
@@ -344,6 +346,6 @@ python -m unittest discover -s tests -p test_postgres_vectors.py -v
 Remove-Item Env:GROUPING_TEST_POSTGRES
 ```
 
-Os testes do agrupamento verificam limiar inclusivo, singletons, duplicatas, todos os pares, empates, isolamento por fonte/segmento, preservação dos campos, antiencadeamento, realocação de maior média, ciclos reais e limite de movimentos, cache/invalidação, float32, batching/índices/erros do provedor e atomicidade do JSON. As integrações usam perfis com UUID e removem exclusivamente seus registros no final; verificam pgvector real, persistência, idempotência, dimensões e a CLI com servidor HTTP local.
+Os testes do agrupamento verificam limiar inclusivo, singletons, duplicatas, todos os pares calculados uma vez, prioridade pelo maior mínimo entre grupos, empates, maximalidade da partição, isolamento por fonte/segmento, preservação dos campos, rejeição de pares abaixo do limiar mesmo quando todas as médias passam, cache/invalidação, float32, batching/índices/erros do provedor e atomicidade do JSON. As integrações usam perfis com UUID e removem exclusivamente seus registros no final; verificam pgvector real, persistência, idempotência, dimensões e a CLI com servidor HTTP local.
 
 Os testes são offline e não requerem chave de API. Cobrem o exemplo de oito palavras, múltiplas fontes e segmentos, substituição de mapas, reinicialização de `count`, pontuação, caixa, acentos, Unicode, repetições, vazios, preservação dos dados, reuso por identidade em memória e pipeline genérico. A extração cobre concorrência realmente simultânea com conclusão fora de ordem, limite de tarefas, parada independente por segmento, contagem por informação, concatenação de duplicatas, retomada do histórico com contagens antigas, segmentos já cobertos sem chamadas, imutabilidade dos dados, mapas/histórico inválidos antes de qualquer chamada, mapas vazios e de um token, falha de cobertura no limite sem persistir resultados parciais, validação estrita dos IDs/respostas, separação sistema/dados/schema, escapes, propagação da configuração, respostas recusadas/truncadas/inválidas, erros HTTP sanitizados sem retries, provedores/pipelines/repositórios alternativos e proteção atômica de arquivos. Um servidor HTTP local simulado verifica sucesso e falha do fluxo completo da CLI com configuração compatível.
