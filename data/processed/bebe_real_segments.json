@@ -236,34 +236,34 @@
                         {
                             "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
                             "context": "Ação e participantes; responde quem apareceu em público e com quem.",
-                            "avg_similarity": 0.9235873271773868
+                            "avg_similarity": 0.9235858566685224
                         },
                         {
                             "info": "A aparição pública do Príncipe Harry e da Duquesa Meghan Markle com o filho ocorreu pela primeira vez.",
                             "context": "Caracterização temporal da aparição; responde se essa foi a primeira vez que apareceram em público com o filho.",
-                            "avg_similarity": 0.9235873271773868
+                            "avg_similarity": 0.9235858566685224
                         },
                         {
                             "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
                             "context": "Ação e companhia: responde quem apareceu em público e com quem.",
-                            "avg_similarity": 0.9235873271773868
+                            "avg_similarity": 0.9235858566685224
                         },
                         {
                             "info": "A aparição pública do Príncipe Harry e da Duquesa Meghan Markle com o filho ocorreu pela primeira vez.",
                             "context": "Caracterização temporal da aparição: responde se essa foi a primeira vez que apareceram em público com o filho.",
-                            "avg_similarity": 0.9235873271773868
+                            "avg_similarity": 0.9235858566685224
                         }
                     ],
                     [
                         {
                             "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
                             "context": "Nascimento e tempo decorrido; responde quando o filho nasceu.",
-                            "avg_similarity": 0.9999999999999999
+                            "avg_similarity": 1.0
                         },
                         {
                             "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
                             "context": "Nascimento e tempo decorrido: responde quando o filho nasceu.",
-                            "avg_similarity": 0.9999999999999999
+                            "avg_similarity": 1.0
                         }
                     ]
                 ]
