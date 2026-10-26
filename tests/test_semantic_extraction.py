@@ -145,8 +145,7 @@ class ExtractionDomainTests(unittest.TestCase):
         for generation in (0, -1, True, "1"):
             with self.subTest(generation=generation), self.assertRaises(ValueError):
                 CoverageFeedback(generation, ((0, 0),))
-        self.assertEqual(CoverageFeedback(1, ()).pending, ())
-        for pending in ([], ((0, False),), (("0", 0),), ((0, -1),), ((0, "ignore"),),
+        for pending in ([], (), ((0, False),), (("0", 0),), ((0, -1),), ((0, "ignore"),),
                         ((1, 0), (0, 1)), ((0, 0), (0, 1)), ([0, 0],)):
             with self.subTest(pending=pending), self.assertRaises(ValueError):
                 CoverageFeedback(1, pending)
@@ -599,11 +598,7 @@ class ExtractionAdapterTests(unittest.TestCase):
 
 class ExtractionConfigurationTests(unittest.TestCase):
     def test_packaged_defaults_and_explicit_toml_overrides(self):
-        packaged = load_extraction_config()
-        self.assertEqual((packaged.model, packaged.temperature, packaged.seed, packaged.reasoning_effort),
-                         ("gpt-6-luna", 0.0, 42, "none"))
-        self.assertEqual(packaged.max_generations_per_segment, 20)
-        self.assertEqual(ExtractionConfig().max_generations_per_segment, 10)
+        self.assertEqual(load_extraction_config(), ExtractionConfig())
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "local.toml"
             path.write_text('provider="openai-compatible"\nmodel="offline-custom"\nbase_url="http://127.0.0.1:8080/v1"\nreasoning_effort="omit"\nseed=24\nmax_concurrency=2\nmax_generations_per_segment=7\napi_key_env="LOCAL_KEY"', encoding="utf-8")

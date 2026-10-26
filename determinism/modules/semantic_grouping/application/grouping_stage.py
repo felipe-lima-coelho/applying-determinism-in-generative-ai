@@ -25,28 +25,7 @@ class GroupingStage:
             raise GroupingError("threshold deve ser um número finito entre -1 e 1.")
 
     def __call__(self, dataset: Dataset) -> Dataset:
-        return self._group(dataset)
-
-    @staticmethod
-    def validate_dataset(dataset: Dataset) -> None:
-        """Preflight puro, reutilizável antes de outras inferências pagas."""
-        validate_information_dataset(dataset)
-
-    def group_segments(self, dataset: Dataset, selected_segments: frozenset[tuple[int, int]]) -> Dataset:
-        """Reagrupa apenas os segmentos selecionados, sem renumerar fontes/segmentos."""
-        return self._group(dataset, selected_segments)
-
-    def _group(self, dataset: Dataset, selected_segments: frozenset[tuple[int, int]] | None = None) -> Dataset:
         segments = validate_information_dataset(dataset)
-        if selected_segments is not None:
-            known = {(segment.source_index, segment.segment_index) for segment in segments}
-            if (not isinstance(selected_segments, frozenset)
-                    or any(not isinstance(key, tuple) or len(key) != 2 or any(type(index) is not int for index in key)
-                           for key in selected_segments)
-                    or not selected_segments.issubset(known)):
-                raise GroupingError("selected_segments deve conter somente pares válidos de índices originais.")
-            segments = tuple(segment for segment in segments
-                             if (segment.source_index, segment.segment_index) in selected_segments)
         texts = tuple(dict.fromkeys(item.info for segment in segments for item in segment.occurrences))
         # Nenhuma dependência externa é acionada se não houver informações.
         vectors: dict[str, Vector] = {}

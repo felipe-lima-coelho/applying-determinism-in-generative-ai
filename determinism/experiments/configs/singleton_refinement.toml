@@ -1,4 +1,0 @@
-# Limite de rodadas; cada segmento pendente recebe ao menos uma nova geração.
-# Provedor, prompt, seed, modelo, cobertura e concorrência vêm de semantic_extraction.toml.
-# Perfil de embeddings, cache e limiar vêm de semantic_grouping.toml.
-max_rounds = 10
