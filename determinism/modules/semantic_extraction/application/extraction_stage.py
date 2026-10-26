@@ -1,12 +1,12 @@
-"""Gerações concorrentes limitadas até a cobertura, aplicadas após sucesso total."""
+"""Gerações adaptativas limitadas; snapshots válidos quando a cobertura esgota."""
 
 from collections import deque
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ..domain import (
-    MIN_TOKEN_COVERAGE, Dataset, IncompleteCoverageError, InferenceResult, Information,
+    MIN_TOKEN_COVERAGE, CoverageFeedback, Dataset, IncompleteCoverageError, InferenceResult, Information,
     SegmentInput, add_information_counts, count_information, validate_coverage_feasibility,
     validate_information, validate_mapped_dataset,
 )
@@ -23,6 +23,10 @@ class _SegmentProgress:
     @property
     def covered(self) -> bool:
         return all(count >= MIN_TOKEN_COVERAGE for count in self.counts.values())
+
+    @property
+    def pending(self) -> tuple[tuple[int, int], ...]:
+        return tuple((token, count) for token, count in self.counts.items() if count < MIN_TOKEN_COVERAGE)
 
 
 @dataclass(frozen=True)
@@ -49,13 +53,25 @@ class ExtractionStage:
             validate_coverage_feasibility(segment)
         extracted = deepcopy(dataset)
         self._collect(progress)
-        # Nenhum resultado é aplicado antes de TODAS as inferências e validações.
+        # A coleta valida também todas as chamadas em voo após observar o limite.
+        # Outros erros saem antes deste ponto e não oferecem snapshot para salvar.
         for state in progress:
             segment = state.segment
             target = extracted[segment.source_index]["segments"][segment.segment_index]
             target["information"] = state.information
             for token, count in state.counts.items():
                 target["map"][str(token)]["count"] = count
+        incomplete = [state for state in progress if not state.covered]
+        if incomplete:
+            details = []
+            for state in incomplete:
+                missing = ", ".join(f"{token}={count}" for token, count in state.pending)
+                details.append(
+                    f"{state.segment.path}: cobertura incompleta após {state.generations} gerações "
+                    f"(max_generations_per_segment={self.max_generations_per_segment}); "
+                    f"tokens com count < {MIN_TOKEN_COVERAGE} (ID=count): {missing}."
+                )
+            raise IncompleteCoverageError("\n".join(details), partial_dataset=extracted)
         return extracted
 
     def _collect(self, progress: list[_SegmentProgress]) -> None:
@@ -63,13 +79,15 @@ class ExtractionStage:
         if not remaining:
             return
         pending: dict[Future[InferenceResult], int] = {}
+        exhausted = False
         with ThreadPoolExecutor(max_workers=self.max_concurrency, thread_name_prefix="semantic-extraction") as executor:
             def fill_available_slots() -> None:
-                while remaining and len(pending) < self.max_concurrency:
+                while not exhausted and remaining and len(pending) < self.max_concurrency:
                     index = remaining.popleft()
                     state = progress[index]
                     state.generations += 1
-                    pending[executor.submit(self.provider.extract, state.segment)] = index
+                    request = replace(state.segment, coverage=CoverageFeedback(state.generations, state.pending))
+                    pending[executor.submit(self.provider.extract, request)] = index
 
             try:
                 fill_available_slots()
@@ -90,17 +108,11 @@ class ExtractionStage:
                         add_information_counts(state.counts, information)
                         if not state.covered:
                             if state.generations >= self.max_generations_per_segment:
-                                missing = ", ".join(
-                                    f"{token}={count}" for token, count in state.counts.items()
-                                    if count < MIN_TOKEN_COVERAGE
-                                )
-                                raise IncompleteCoverageError(
-                                    f"{segment.path}: cobertura incompleta após {state.generations} gerações "
-                                    f"(max_generations_per_segment={self.max_generations_per_segment}); "
-                                    f"tokens com count < {MIN_TOKEN_COVERAGE} (ID=count): {missing}. "
-                                    "Nenhum resultado será salvo."
-                                )
-                            remaining.append(index)
+                                # Pare submissões, mas retenha respostas já pagas/em voo
+                                # somente depois de validar todas elas.
+                                exhausted = True
+                            else:
+                                remaining.append(index)
                     fill_available_slots()
             except BaseException:
                 for future in pending:

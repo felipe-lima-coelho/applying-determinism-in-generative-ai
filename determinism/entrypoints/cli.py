@@ -25,7 +25,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     extraction = commands.add_parser("extract", help="Acumula information até cada token ter pelo menos duas referências.")
     extraction.add_argument("input", type=Path, help="Dataset JSON já mapeado.")
-    extraction.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada após sucesso total.")
+    extraction.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada. Salva progresso válido se atingir o limite de cobertura.")
     extraction.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_extraction.toml.")
     extraction.add_argument("--env-file", type=Path, default=Path(".env"), help="Credencial opcional em .env; ambiente tem precedência.")
     grouping = commands.add_parser("group", help="Agrupa information por complete linkage dentro de cada segmento.")

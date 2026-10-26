@@ -1,6 +1,7 @@
 """Contratos e validações puras da extração semântica."""
 
 from .contracts import (
+    CoverageFeedback,
     Dataset,
     ExtractionError,
     InferenceResult,
@@ -21,7 +22,7 @@ from .coverage import (
 )
 
 __all__ = [
-    "Dataset", "ExtractionError", "InferenceResult", "Information",
+    "CoverageFeedback", "Dataset", "ExtractionError", "InferenceResult", "Information",
     "MapValidationError", "ResponseValidationError", "SegmentInput", "TokenReference",
     "validate_information", "validate_mapped_dataset",
     "MIN_TOKEN_COVERAGE", "IncompleteCoverageError", "add_information_counts",

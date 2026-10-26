@@ -7,7 +7,7 @@ from ..modules.semantic_extraction.adapters import (
     ExtractionConfig, OpenAICompatibleProvider, load_extraction_config, read_api_key,
 )
 from ..modules.semantic_extraction.application import ExtractionStage
-from ..modules.semantic_extraction.domain import Dataset
+from ..modules.semantic_extraction.domain import Dataset, IncompleteCoverageError
 from ..modules.semantic_extraction.ports import DatasetRepository, InferenceProvider
 from ..modules.text_mapping.adapters import JsonDatasetRepository
 from ..pipelines import Pipeline
@@ -30,7 +30,17 @@ class SemanticExtractionExperiment:
     def run(self, input_path: str | Path, output_path: str | Path | None = None) -> Dataset:
         source = Path(input_path)
         destination = Path(output_path) if output_path is not None else source
-        extracted = self.extract(self.repository.load(source))
+        try:
+            extracted = self.extract(self.repository.load(source))
+        except IncompleteCoverageError as error:
+            if error.partial_dataset is None:
+                raise
+            self.repository.save(destination, error.partial_dataset)
+            raise IncompleteCoverageError(
+                f"{error}\nProgresso parcial salvo em {destination}. A cobertura continua incompleta. "
+                "Para retomar, use esse arquivo salvo como entrada; as informações serão recontadas sem duplicar o histórico.",
+                partial_dataset=error.partial_dataset,
+            ) from None
         self.repository.save(destination, extracted)
         return extracted
 

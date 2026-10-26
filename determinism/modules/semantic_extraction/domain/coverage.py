@@ -1,13 +1,17 @@
 """Contagem determinística das referências validadas de cada ocorrência textual."""
 
-from .contracts import ExtractionError, Information, SegmentInput
+from .contracts import Dataset, ExtractionError, Information, SegmentInput
 
 
 MIN_TOKEN_COVERAGE = 2
 
 
 class IncompleteCoverageError(ExtractionError):
-    """A cobertura mínima não pôde ser atingida; o resultado não deve ser salvo."""
+    """Meta incompleta; um snapshot validado permite salvar e retomar o progresso."""
+
+    def __init__(self, message: str, *, partial_dataset: Dataset | None = None) -> None:
+        super().__init__(message)
+        self.partial_dataset = partial_dataset
 
 
 def add_information_counts(counts: dict[int, int], information: list[Information]) -> None:

@@ -32,11 +32,31 @@ class TokenReference:
 
 
 @dataclass(frozen=True)
+class CoverageFeedback:
+    """Estado numérico da tentativa; nunca contém texto do dataset ou do modelo."""
+
+    generation: int
+    pending: tuple[tuple[int, int], ...]
+
+    def __post_init__(self) -> None:
+        if type(self.generation) is not int or self.generation < 1:
+            raise ValueError("generation deve ser um inteiro positivo.")
+        if not isinstance(self.pending, tuple) or not self.pending:
+            raise ValueError("pending deve conter pares imutáveis de ID e contagem.")
+        for pair in self.pending:
+            if not isinstance(pair, tuple) or len(pair) != 2 or any(type(value) is not int or value < 0 for value in pair):
+                raise ValueError("pending deve conter somente IDs e contagens inteiros não negativos.")
+        if any(left[0] >= right[0] for left, right in zip(self.pending, self.pending[1:])):
+            raise ValueError("Os IDs pendentes devem ser distintos e crescentes.")
+
+
+@dataclass(frozen=True)
 class SegmentInput:
     source_index: int
     segment_index: int
     content: str
     tokens: tuple[TokenReference, ...]
+    coverage: CoverageFeedback | None = None
 
     @property
     def path(self) -> str:

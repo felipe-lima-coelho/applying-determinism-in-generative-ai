@@ -10,7 +10,7 @@ from typing import Any
 from ..domain import InferenceResult, SegmentInput
 from ..ports import InferenceError
 from .configuration import ConfigurationError, ExtractionConfig
-from .prompts import structured_output, system_prompt, user_message
+from .prompts import coverage_message, structured_output, system_prompt, user_message
 
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -60,10 +60,14 @@ class OpenAICompatibleProvider:
 
     def build_request_body(self, segment: SegmentInput) -> dict[str, Any]:
         contract = structured_output()
+        prompt = system_prompt()
+        feedback = coverage_message(segment)
+        if feedback is not None:
+            prompt += "\n\n" + feedback
         body = {
             "model": self.config.model,
             "messages": [
-                {"role": "system", "content": system_prompt()},
+                {"role": "system", "content": prompt},
                 {"role": "user", "content": user_message(segment)},
             ],
             "temperature": self.config.temperature,
