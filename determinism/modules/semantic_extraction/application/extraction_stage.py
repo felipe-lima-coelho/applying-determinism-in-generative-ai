@@ -42,6 +42,28 @@ class ExtractionStage:
             raise ValueError("max_generations_per_segment deve ser um inteiro positivo.")
 
     def __call__(self, dataset: Dataset) -> Dataset:
+        return self._extract(dataset)
+
+    @staticmethod
+    def validate_dataset(dataset: Dataset) -> None:
+        """Preflight puro de todos os mapas e de todo o histórico, sem inferência."""
+        ExtractionStage._prepare(dataset)
+
+    def extract_segments(
+        self, dataset: Dataset, selected_segments: frozenset[tuple[int, int]], *, generation_round: int = 1,
+    ) -> Dataset:
+        """Acrescenta ao menos uma geração nos índices originais selecionados.
+
+        A cobertura continua obrigatória. Cada rodada reserva uma janela de
+        ordinais do tamanho do limite de gerações, sem reiniciar ordinais entre
+        rodadas que precisaram de várias inferências para alcançar cobertura.
+        """
+        if type(generation_round) is not int or generation_round < 1:
+            raise ValueError("generation_round deve ser um inteiro positivo.")
+        return self._extract(dataset, selected_segments, force_generation=True, generation_round=generation_round)
+
+    @staticmethod
+    def _prepare(dataset: Dataset) -> list[_SegmentProgress]:
         segments = validate_mapped_dataset(dataset)
         progress = []
         # Todo o histórico também precisa ser validado antes da primeira chamada.
@@ -49,19 +71,36 @@ class ExtractionStage:
             stored = dataset[segment.source_index]["segments"][segment.segment_index]
             information = validate_information({"informacoes": stored.get("information", [])}, segment)
             progress.append(_SegmentProgress(segment, information, count_information(segment, information)))
-        for segment in segments:
-            validate_coverage_feasibility(segment)
+        return progress
+
+    def _extract(
+        self, dataset: Dataset, selected_segments: frozenset[tuple[int, int]] | None = None, *,
+        force_generation: bool = False, generation_round: int = 1,
+    ) -> Dataset:
+        progress = self._prepare(dataset)
+        known = {(state.segment.source_index, state.segment.segment_index) for state in progress}
+        if selected_segments is not None and (
+            not isinstance(selected_segments, frozenset)
+            or any(not isinstance(key, tuple) or len(key) != 2 or any(type(index) is not int for index in key)
+                   for key in selected_segments)
+            or not selected_segments.issubset(known)
+        ):
+            raise ValueError("selected_segments deve conter somente pares válidos de índices originais.")
+        active = [state for state in progress if selected_segments is None
+                  or (state.segment.source_index, state.segment.segment_index) in selected_segments]
+        for state in active:
+            validate_coverage_feasibility(state.segment)
         extracted = deepcopy(dataset)
-        self._collect(progress)
+        self._collect(active, force_generation, (generation_round - 1) * self.max_generations_per_segment)
         # A coleta valida também todas as chamadas em voo após observar o limite.
         # Outros erros saem antes deste ponto e não oferecem snapshot para salvar.
-        for state in progress:
+        for state in active:
             segment = state.segment
             target = extracted[segment.source_index]["segments"][segment.segment_index]
             target["information"] = state.information
             for token, count in state.counts.items():
                 target["map"][str(token)]["count"] = count
-        incomplete = [state for state in progress if not state.covered]
+        incomplete = [state for state in active if not state.covered]
         if incomplete:
             details = []
             for state in incomplete:
@@ -74,8 +113,10 @@ class ExtractionStage:
             raise IncompleteCoverageError("\n".join(details), partial_dataset=extracted)
         return extracted
 
-    def _collect(self, progress: list[_SegmentProgress]) -> None:
-        remaining = deque(index for index, state in enumerate(progress) if not state.covered)
+    def _collect(
+        self, progress: list[_SegmentProgress], force_generation: bool = False, generation_offset: int = 0,
+    ) -> None:
+        remaining = deque(index for index, state in enumerate(progress) if force_generation or not state.covered)
         if not remaining:
             return
         pending: dict[Future[InferenceResult], int] = {}
@@ -86,7 +127,7 @@ class ExtractionStage:
                     index = remaining.popleft()
                     state = progress[index]
                     state.generations += 1
-                    request = replace(state.segment, coverage=CoverageFeedback(state.generations, state.pending))
+                    request = replace(state.segment, coverage=CoverageFeedback(generation_offset + state.generations, state.pending))
                     pending[executor.submit(self.provider.extract, request)] = index
 
             try:

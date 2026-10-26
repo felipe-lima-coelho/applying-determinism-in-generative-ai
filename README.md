@@ -95,7 +95,7 @@ A configuração versionada está em [`determinism/experiments/configs/semantic_
 | `model` | `gpt-6-luna` | Identificador exato, sem substituição automática |
 | `base_url` | `https://api.openai.com/v1` | Endpoint base de Chat Completions |
 | `max_concurrency` | `4` | Limite de chamadas e tarefas pendentes (1 a 256) |
-| `max_generations_per_segment` | `10` | Limite de novas gerações por segmento nesta execução; cobertura incompleta causa erro |
+| `max_generations_per_segment` | `20` | Limite do TOML atual de novas gerações por segmento nesta execução; cobertura incompleta causa erro. O default da API Python permanece `10`. |
 | `temperature` | `0.0` | Temperatura enviada explicitamente |
 | `seed` | `42` | Semente inteira fixa enviada explicitamente |
 | `reasoning_effort` | `none` | Permite temperatura explícita no modelo padrão |
@@ -257,6 +257,38 @@ Em 25/10/2026, uma única requisição real de embeddings processou os **3 texto
 
 Com complete linkage e esses mesmos vetores, o resultado continua contendo **6 ocorrências em grupos de 4 e 2**: o cosseno entre os textos A e B é `0.8853809907660802`, acima de `0.85`; A–C e B–C são `0.7220780303650856` e `0.6829254158505015`. Portanto, A e B e suas repetições podem compartilhar um grupo; C e sua repetição ficam no outro. O limiar e os dados originais permanecem iguais.
 
+## Refinamento de grupos singleton
+
+Depois de executar `group` em **todos** os segmentos do dataset, execute o experimento independente:
+
+```powershell
+python -m determinism refine data/processed/bebe_real_segments.json
+```
+
+Um singleton é um grupo que contém exatamente **uma ocorrência**. Um segmento com um único grupo de dois ou mais membros já satisfaz o critério. Antes de ler credenciais, inicializar PostgreSQL ou fazer inferência, `refine` exige `set_different_information` em cada segmento e verifica que os grupos não vazios particionam exatamente o multiconjunto `(info, context)` de `information`, incluindo todas as duplicatas. Valida também todos os mapas e históricos. Grupos ausentes ou desatualizados geram erro com o caminho e a instrução de executar `group`; o refinamento não corrige essa entrada implicitamente. `information=[]` junto com grupos vazios é válido. Sem singleton, nenhuma geração, consulta ao cache ou operação de reagrupamento ocorre.
+
+Em cada rodada, somente os segmentos que ainda têm singleton recebem novas gerações. A aplicação reutiliza `ExtractionStage.extract_segments` sobre o dataset completo, com os índices originais de fonte e segmento. Cada segmento selecionado recebe **ao menos uma inferência**, mesmo quando todos os tokens já têm duas referências. A cobertura mínima continua valendo: se ainda houver IDs abaixo da meta, a extração pode continuar até o seu limite configurado. Novas informações validadas são acrescentadas ao histórico; ocorrências idênticas são mantidas. Os `count` dos segmentos selecionados são recontados a partir de todas as referências, sem somar novamente os contadores antigos.
+
+O provedor, o modelo, a temperatura, a seed, o schema, o limite de cobertura e a concorrência vêm do mesmo TOML atual de `extract`. O sistema base e a mensagem de usuário continuam iguais. O helper compartilhado de feedback numérico admite `pending=[]`: nesse caso orienta executar a extração completa do trecho, sem inventar IDs pendentes nem acrescentar orientação específica sobre singleton. Rodadas usam janelas distintas de ordinais do tamanho de `max_generations_per_segment` (com o limite atual de 20, a primeira inferência das rodadas 1 e 2 tem ordinais 1 e 21). O contador de rodadas e os ordinais recomeçam ao retomar uma execução.
+
+Após a extração, `GroupingStage.group_segments` reutiliza o perfil, o cache e a configuração atual de `group`. Somente textos únicos ausentes do cache geram embeddings. Todos os vetores são persistidos e relidos em float32; o mesmo complete linkage reagrupa todas as ocorrências acumuladas do segmento, exigindo cada par com cosseno `>= 0.85` no padrão. O módulo de refinamento não implementa outra estratégia de agrupamento. Depois de cada rodada, ele reexamina todos os grupos, inclusive singletons novos criados pela última resposta. Segmentos concluídos deixam de gerar, consultar vetores e reagrupar nas rodadas seguintes; seus dados ficam intactos. Segmentos e fontes continuam independentes.
+
+O limite separado do loop está em [`determinism/experiments/configs/singleton_refinement.toml`](determinism/experiments/configs/singleton_refinement.toml), com `max_rounds=10`. `--config` escolhe esse TOML e `--max-rounds` sobrescreve explicitamente seu limite. `--extraction-config` e `--grouping-config` selecionam, respectivamente, os mesmos arquivos de configuração usados pelos dois experimentos existentes, inclusive para modelos locais e outros perfis de embeddings. `--env-file` mantém o leitor de credenciais existente. Para limitar uma execução e salvar em outro arquivo:
+
+```powershell
+python -m determinism refine data/processed/bebe_real_segments.json --max-rounds 2 --output data/processed/bebe_refined.json
+```
+
+O experimento salva um checkpoint atômico do dataset inteiro **somente depois de concluir extração, embeddings e agrupamento de toda a rodada**. Sem `--output`, esse checkpoint substitui a entrada; com `--output`, a entrada fica intacta. Se o limite ainda deixar singletons, lança `IncompleteRefinementError`, informa seus caminhos e quantidades e a CLI termina com código 1. Falha posterior do provedor, da validação ou dos embeddings mantém os checkpoints das rodadas anteriores. Informações apenas extraídas na rodada que falhou não são salvas com grupos antigos, inclusive quando `extract` oferece um snapshot parcial de cobertura. Vetores já persistidos no cache podem ser reutilizados. Falha na substituição atômica preserva o último arquivo salvo.
+
+Para retomar, execute `refine` usando **o checkpoint salvo como entrada**; com `--output`, isso significa o arquivo de saída anterior. O histórico é revalidado e recontado, sem ser copiado outra vez. O limite nunca transforma resultado incompleto em sucesso: sucesso exige zero grupos singleton. Repetir a extração com as mesmas configurações pode produzir novamente informações dos grupos já existentes, sem resolver um singleton; não há garantia de convergência nem inserção artificial de cópias para encerrá-lo.
+
+Em Python, `SingletonRefinementStage(extractor, grouper, max_rounds=10, on_progress=...)` é uma etapa chamável e substituível em qualquer `Pipeline`. Suas portas `SelectedExtractor` e `SelectedGrouper` fornecem preflight puro e operações selecionadas sobre o dataset completo; as etapas existentes já implementam esses contratos. `refine_dataset(dataset, extractor=..., grouper=..., max_rounds=...)` mantém a entrada intacta e não escreve arquivos. O callback opcional recebe uma cópia coerente após cada rodada. `SingletonRefinementExperiment(pipeline, repository=...)` liga os checkpoints ao repositório e aceita outro pipeline; `run_refinement(..., provider=..., embedding_provider=..., vector_store=..., strategy=..., repository=...)` oferece a composição com arquivos e adaptadores substituíveis. Domínio e aplicação não conhecem JSON, HTTP ou SQL.
+
+Na verificação real limitada de 26/10/2026, uma cópia temporária de `$[1].segments[1]` recebeu duas gerações de `gpt-6-luna`, com três novas ocorrências válidas cada: 13 → 16 → 19 informações. Os dez textos únicos já estavam no perfil de cache atual, portanto não houve chamada de embeddings. Os grupos evoluíram de `[4,4,4,1]` para `[5,5,5,1]` e `[6,6,6,1]`; o singleton persistiu e a etapa informou corretamente refinamento incompleto no limite de duas rodadas. Cada checkpoint preservou o prefixo histórico, os metadados e a partição exata e teve todos os pares internos acima do limiar (menor cosseno `0.8739834376903587`). O hash SHA256 do dataset principal permaneceu igual. Esse resultado não foi incorporado ao dataset principal.
+
+A retomada autorizada desse checkpoint executou mais oito rodadas e parou no limite, totalizando dez chamadas generativas. Cada rodada acrescentou quatro ocorrências válidas, chegando a 51; quatro lotes de embeddings persistiram cinco textos únicos novos, mantendo o mesmo perfil. Os grupos finais foram `[14,14,14,8,1]`: ainda havia um singleton. Todos os checkpoints preservaram os prefixos de 13 e 19 ocorrências, contagens derivadas do histórico e a regra de todos os pares, sem alterar o dataset principal. O experimento confirmou retomada real e falha explícita por não convergência dentro do orçamento autorizado; não confirma que novas rodadas necessariamente resolveriam a pendência.
+
 ## Organização e extensão
 
 O monólito modular segue uma arquitetura orientada a experimentos científicos (Experiment-Driven Architecture). O módulo funcional contém suas regras, caso de uso, portas e adaptadores em diretórios específicos. Os experimentos são unidades explícitas de composição e execução, e o pipeline é reutilizável fora desse módulo:
@@ -282,26 +314,33 @@ determinism/
 │   │   ├── application/           # Etapa concorrente com sucesso integral
 │   │   ├── adapters/              # HTTP compatível, configuração e mensagens
 │   │   └── assets/                # Sistema e JSON Schema versionados separados
-│   └── semantic_grouping/
-│       ├── domain/                # Validação, cossenos e agrupamento determinístico
-│       ├── ports/                 # Embeddings, cache, estratégia e repositório
-│       ├── application/           # Etapa isolada por segmento, com releitura do cache
-│       └── adapters/              # HTTP embeddings, TOML e PostgreSQL/pgvector
+│   ├── semantic_grouping/
+│   │   ├── domain/                # Validação, cossenos e agrupamento determinístico
+│   │   ├── ports/                 # Embeddings, cache, estratégia e repositório
+│   │   ├── application/           # Etapa isolada por segmento, com releitura do cache
+│   │   └── adapters/              # HTTP embeddings, TOML e PostgreSQL/pgvector
+│   └── singleton_refinement/
+│       ├── domain/                # Partição exata existente, singletons e falha explícita
+│       ├── ports/                 # Etapas selecionadas, progresso e repositório
+│       ├── application/           # Loop limitado; publica só rodadas coerentes
+│       └── adapters/              # Configuração TOML do limite de rodadas
 ├── pipelines/
 │   └── sequential.py              # Pipeline genérico e contrato de etapa
 ├── experiments/
 │   ├── word_mapping.py            # Definição do mapeamento
 │   ├── semantic_extraction.py     # Composição explícita da extração
 │   ├── semantic_grouping.py       # Composição explícita do agrupamento
+│   ├── singleton_refinement.py    # Composição das etapas existentes e checkpoints
 │   └── configs/
 │       ├── semantic_extraction.toml
-│       └── semantic_grouping.toml
+│       ├── semantic_grouping.toml
+│       └── singleton_refinement.toml
 ├── entrypoints/
 │   └── cli.py                    # Interface de linha de comando
 └── __main__.py
 ```
 
-As dependências apontam para as regras internas: `application` usa seu `domain` e suas portas; `adapters` implementa essas portas; `ports` depende somente de tipos internos e da biblioteca padrão. O domínio não conhece arquivos, CLI, experimentos ou adaptadores. Os domínios e aplicações dos três módulos não importam um ao outro. As composições da extração e do agrupamento reutilizam o adaptador JSON existente por compatibilidade estrutural com suas próprias portas de persistência, sem acoplar suas aplicações ao módulo de mapeamento. `pipelines` só conhece um tipo genérico e objetos chamáveis, sem importar módulos funcionais ou JSON. `experiments` reúne essas peças e `entrypoints` aciona o experimento. O pacote raiz não carrega adaptadores ao importar um componente interno.
+As dependências apontam para as regras internas: `application` usa seu `domain` e suas portas; `adapters` implementa essas portas; `ports` depende somente de tipos internos e da biblioteca padrão. O domínio não conhece arquivos, CLI, experimentos ou adaptadores. Os domínios e aplicações dos módulos não importam um ao outro. As composições dos experimentos reutilizam o adaptador JSON existente por compatibilidade estrutural com suas próprias portas de persistência, sem acoplar suas aplicações ao módulo de mapeamento. O experimento de refinamento injeta as etapas selecionadas existentes por portas próprias, mantendo seus algoritmos nos módulos originais. `pipelines` só conhece um tipo genérico e objetos chamáveis, sem importar módulos funcionais ou JSON. `experiments` reúne essas peças e `entrypoints` aciona o experimento. O pacote raiz não carrega adaptadores ao importar um componente interno.
 
 `WordMappingExperiment` é uma definição executável com `pipeline` e `repository` injetáveis. Sua configuração padrão usa `MappingStage`, `UnicodeWordTokenizer` e `JsonDatasetRepository`; a mesma definição pode ser reutilizada em diferentes datasets. A configuração em Python registra quais implementações e em qual ordem o experimento executa. Não há framework de configuração ou registro automático de resultados nesta primeira etapa.
 
@@ -350,5 +389,7 @@ Remove-Item Env:GROUPING_TEST_POSTGRES
 ```
 
 Os testes do agrupamento verificam limiar inclusivo, singletons, duplicatas, todos os pares calculados uma vez, prioridade pelo maior mínimo entre grupos, empates, maximalidade da partição, isolamento por fonte/segmento, preservação dos campos, rejeição de pares abaixo do limiar mesmo quando todas as médias passam, cache/invalidação, float32, batching/índices/erros do provedor e atomicidade do JSON. As integrações usam perfis com UUID e removem exclusivamente seus registros no final; verificam pgvector real, persistência, idempotência, dimensões e a CLI com servidor HTTP local.
+
+Os testes de refinamento verificam a precondição global antes de credenciais/banco/inferência, grupos desatualizados e multiplicidades, geração forçada em segmentos cobertos, parada independente entre fontes/segmentos, rodadas sem avanço, singletons novos, preservação integral do histórico, contagem correta, cache de textos novos e repetidos, complete linkage e médias descritivas, ausência de trabalho para segmentos resolvidos, checkpoints coerentes, retomada, limite com erro/CLI nãozero, falha de extração parcial, provedor/embedding/escrita atômica, pipelines/repositórios alternativos e configurações independentes por etapa. O fluxo da CLI com servidores HTTP locais usa os mesmos adaptadores reais de extração e embeddings, com cache em memória.
 
 Os testes são offline e não requerem chave de API. Cobrem o exemplo de oito palavras, múltiplas fontes e segmentos, substituição de mapas, reinicialização de `count`, pontuação, caixa, acentos, Unicode, repetições, vazios, preservação dos dados, reuso por identidade em memória e pipeline genérico. A extração cobre concorrência realmente simultânea com conclusão fora de ordem, limite de tarefas, parada independente por segmento, contagem por informação, concatenação de duplicatas, retomada do histórico com contagens antigas, segmentos já cobertos sem chamadas, imutabilidade dos dados, mapas/histórico inválidos antes de qualquer chamada, mapas vazios e de um token, feedback numérico e ordinal por geração, revisão das ocorrências 17/23, snapshots no limite com chamadas em voo e segmentos não iniciados, retomada sem dupla contagem, validação estrita dos IDs/respostas, separação sistema/dados/schema, escapes, propagação da configuração, respostas recusadas/truncadas/inválidas, erros HTTP sanitizados sem retries, provedores/pipelines/repositórios alternativos e proteção atômica de arquivos. Um servidor HTTP local simulado verifica sucesso completo e salvamento parcial com saída nãozero no fluxo da CLI.

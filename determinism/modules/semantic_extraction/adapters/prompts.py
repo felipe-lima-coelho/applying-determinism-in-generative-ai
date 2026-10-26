@@ -28,6 +28,17 @@ def coverage_message(segment: SegmentInput) -> str | None:
                      for token, count in feedback.pending]},
         ensure_ascii=True, separators=(",", ":"),
     )
+    if not feedback.pending:
+        return (
+            "Esta é uma geração de um processo de extração com cobertura acumulada. "
+            "O estado numérico abaixo foi calculado a partir de referências já validadas. "
+            "Todos os IDs já atingiram minimum_count; não há IDs pendentes. "
+            "Execute novamente a extração completa do trecho original, seguindo o mesmo sistema base "
+            "e o schema da API. Extraia somente afirmações completas e fiéis sustentadas pelo trecho, "
+            "associando as ocorrências originais dos tokens. A cobertura atingida não dispensa esta "
+            "geração e não autoriza inventar fatos, fabricar associações ou criar afirmações artificiais.\n\n"
+            f"<coverage_state>\n{state}\n</coverage_state>"
+        )
     return (
         "Esta é uma geração de um processo de extração com cobertura acumulada. "
         "O estado numérico abaixo foi calculado a partir de referências já validadas; "

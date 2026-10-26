@@ -41,8 +41,8 @@ class CoverageFeedback:
     def __post_init__(self) -> None:
         if type(self.generation) is not int or self.generation < 1:
             raise ValueError("generation deve ser um inteiro positivo.")
-        if not isinstance(self.pending, tuple) or not self.pending:
-            raise ValueError("pending deve conter pares imutáveis de ID e contagem.")
+        if not isinstance(self.pending, tuple):
+            raise ValueError("pending deve ser uma tupla de pares imutáveis de ID e contagem.")
         for pair in self.pending:
             if not isinstance(pair, tuple) or len(pair) != 2 or any(type(value) is not int or value < 0 for value in pair):
                 raise ValueError("pending deve conter somente IDs e contagens inteiros não negativos.")
