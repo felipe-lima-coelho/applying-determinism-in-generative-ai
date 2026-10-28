@@ -17,4 +17,5 @@ include = ["determinism*"]
 
 [tool.setuptools.package-data]
 "determinism.modules.semantic_extraction" = ["assets/*.txt", "assets/*.json"]
+"determinism.modules.semantic_catalog" = ["assets/*.txt", "assets/*.json"]
 "determinism.experiments" = ["configs/*.toml"]

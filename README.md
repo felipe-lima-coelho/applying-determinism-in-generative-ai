@@ -257,6 +257,75 @@ Em 25/10/2026, uma única requisição real de embeddings processou os **3 texto
 
 Com complete linkage e esses mesmos vetores, o resultado continua contendo **6 ocorrências em grupos de 4 e 2**: o cosseno entre os textos A e B é `0.8853809907660802`, acima de `0.85`; A–C e B–C são `0.7220780303650856` e `0.6829254158505015`. Portanto, A e B e suas repetições podem compartilhar um grupo; C e sua repetição ficam no outro. O limiar e os dados originais permanecem iguais.
 
+## Catálogo global e remoção de segmentos
+
+As etapas `map`, `extract` e `group` continuam independentes e com seus contratos anteriores. A etapa `catalog` constrói um **artefato global separado**, sem modificar o dataset nem substituir `set_different_information`. A unidade de remoção é o segmento; a unidade de cobertura é uma afirmação do catálogo. Um grupo local pode conter vários detalhes e não é tratado como uma informação indivisível.
+
+```powershell
+python -m determinism catalog data/processed/bebe_real_segments.json --output data/processed/bebe_real_catalog.json
+python -m determinism simulate data/processed/bebe_real_catalog.json --remove s0.seg0 --output data/processed/bebe_real_removal_band_seg0.json --dataset data/processed/bebe_real_segments.json
+```
+
+`catalog` imprime os IDs dos segmentos: `s0.seg0` significa o segmento de índice 0 da fonte de índice 0, com índices base zero. O nome da fonte é apenas descritivo; fontes com nomes iguais continuam distintas. Os IDs são válidos **dentro do snapshot identificado pelo hash do dataset**; não devem ser reutilizados em outro catálogo sem verificar essa identidade.
+
+Para remover vários segmentos simultaneamente, repita `--remove`. Para remover todos os segmentos de uma fonte, use `--remove-source s0`. Os seletores podem ser combinados; repetições contam uma única vez. Nenhuma remoção altera fisicamente o dataset:
+
+```powershell
+python -m determinism simulate data/processed/bebe_real_catalog.json --remove s0.seg0 --remove s1.seg0 --output data/processed/bebe_real_removal_primeiros_segmentos.json
+python -m determinism simulate data/processed/bebe_real_catalog.json --remove-source s0 --output data/processed/bebe_real_removal_band.json
+```
+
+Sem seletores, `simulate` relata a cobertura original. IDs desconhecidos são erros. `--dataset` é opcional: quando informado, verifica o hash integral do dataset, incluindo ordem e metadados, e rejeita catálogos desatualizados. Sem essa opção, o cenário se refere ao snapshot embutido no catálogo. Os destinos dos dois comandos são obrigatórios e devem ser diferentes das entradas, inclusive quando caminhos apontam ao mesmo arquivo por hardlink. A gravação é atômica e o diretório de destino deve existir.
+
+### Construção do catálogo
+
+1. Valida toda a entrada e registra os segmentos, conteúdo, mapas, informações, grupos e metadados. `content` é obrigatório; extrações e grupos anteriores são opcionais e funcionam como pistas. A revisão considera também conteúdo que a extração anterior possa ter omitido.
+2. Extrai unidades com formulações explícitas e evidências literais de `content`. As evidências recebem offsets de caracteres Unicode, com início inclusivo e fim exclusivo; todas as ocorrências de uma citação repetida são registradas. `information_indices` liga cada candidato a ocorrências anteriores quando essa associação foi identificada.
+3. Compara todos os pares de candidatos, inclusive dentro da mesma fonte. O avaliador classifica cada par como `equivalent`, `different` ou `uncertain`. Equivalência exige o mesmo conteúdo factual nas duas direções. Similaridade temática ou implicação somente em uma direção não autoriza a fusão.
+4. Confirma cada proposta de equivalência em uma segunda comparação, usando somente as afirmações isoladas. Isso reduz o risco de importar detalhes do trecho e fundir, por exemplo, um evento com sua data. Só então forma grupos por ligação completa **sobre as decisões de equivalência**, independentemente do limiar de embeddings da etapa `group`. Todo par de um grupo deve ser equivalente nas duas verificações. Relações incertas não fundem unidades; cadeias A–B–C não implicam A–C. Empates seguem a ordem dos candidatos. A formulação canônica é a do primeiro membro, sem nova síntese.
+5. Avalia cada unidade global contra cada segmento. `supported` significa suporte completo, `uncertain` indica possível suporte com ambiguidade, e `not_supported` indica ausência, detalhe não sustentado ou contradição. Todos os segmentos precisam ter uma decisão explícita; respostas incompletas não são tratadas como negativas. Unidades sem nenhum suporte confirmado ou possível ficam em `rejected_facts`, preservadas para auditoria e excluídas das contagens de perda.
+
+O artefato contém `segments`, `candidates`, `comparisons`, `facts`, `rejected_facts`, `policy`, `provenance`, `dataset_fingerprint` e `catalog_id`. Cada fato liga seus candidatos às avaliações, evidências e justificativas. Hashes detectam alterações e identificam snapshots; não são assinaturas nem certificam a correção semântica. A validação estrutural confirma evidências literais, referências, partição e cobertura das avaliações, mas o modelo ainda pode errar na interpretação.
+
+### Perda, preservação e incerteza
+
+Uma informação originalmente confirmada fica **preservada** se algum suporte confirmado sobreviver; fica **incerta** se só restar suporte possível; fica **perdida** se nenhum suporte confirmado ou possível sobreviver. Uma informação cuja própria presença original era incerta permanece na categoria incerta, mesmo após remover todos os seus possíveis suportes; `baseline_status` e `remaining_status` explicam esse caso.
+
+Os relatórios contêm `lost_information`, `preserved_information`, `uncertain_information` e `summary`. Cada entrada inclui a afirmação, evidências restantes confirmadas e possíveis, suportes interrompidos, segmentos faltantes e fontes antes/depois. A redução de fontes é registrada separadamente da perda de conteúdo. Não se somam perdas individuais: remover A ou B pode preservar um fato, enquanto remover ambos pode eliminá-lo.
+
+A construção automática verifica **suporte independente por segmento**. Referências que só possam ser resolvidas com outro segmento devem produzir incerteza; o contexto de origem de uma informação não pode preencher lacunas do segmento avaliado. O formato e o simulador também aceitam avaliações de suporte conjunto: nesse caso, todos os `segment_ids` daquela evidência precisam sobreviver. Esses conjuntos não são inferidos automaticamente nesta versão.
+
+### Configuração, cache e execução local
+
+`--config` seleciona um TOML; o padrão é `determinism/experiments/configs/semantic_catalog.toml`. O avaliador padrão usa `gpt-6-luna`, temperatura 0, seed 42, concorrência 4, lotes de 24 comparações e 16 avaliações, até 8192 tokens de saída e timeout de 120 segundos. `--env-file` e `api_key_env` seguem as regras existentes, com precedência do ambiente. Para servidor local, configure `provider="openai-compatible"`, `model`, `base_url` e, se necessário, `reasoning_effort="omit"`. O catálogo não depende do PostgreSQL nem faz chamadas de embeddings; esta implementação é uma referência semântica exaustiva.
+
+O cache padrão da CLI fica em `.cache/semantic_catalog`, ignorado pelo Git. `--cache-dir` escolhe outro local e `--no-cache` força novas avaliações. Cada resposta validada é persistida atomicamente, identificada pela operação, dados, configuração, revisão e hash dos prompts/schemas. Falhas não substituem o catálogo anterior; respostas já validadas permitem retomar a execução. Não há retries silenciosos. `cache_revision` deve mudar ao trocar pesos locais com o mesmo nome e endpoint. O cache contém textos e decisões do corpus, mas não credenciais.
+
+Repetir com o mesmo cache preserva o catálogo byte a byte; reutilização integral não exige credencial nem rede. Novas inferências não têm garantia de determinismo. Prompts, schemas, configuração, modelo retornado e `system_fingerprint`, quando disponível, ficam identificados na proveniência.
+
+### API Python e vários cenários
+
+```python
+from determinism.experiments import run_catalog, RemovalSimulator
+
+catalog = run_catalog(
+    "data/processed/bebe_real_segments.json",
+    "data/processed/bebe_real_catalog.json",
+    cache_dir=".cache/semantic_catalog",
+)
+simulator = RemovalSimulator(catalog)  # Valida e compila o índice uma única vez.
+individual = simulator.simulate(removed_segment_ids=["s0.seg0"])
+conjunta = simulator.simulate(removed_segment_ids=["s0.seg0", "s1.seg0"])
+fonte = simulator.simulate(removed_source_ids=["s0"])
+print(conjunta["lost_information"])
+```
+
+`simulate_removal(catalog, ...)` é a alternativa para um único cenário. Nenhuma simulação usa modelos. `RemovalSimulator` mantém um índice imutável e não revalida a matriz de candidatos a cada consulta. `build_catalog(dataset, provider=...)` e `CatalogStage` permitem trocar o avaliador por implementações das portas `extract`, `compare` e `assess`. Provedores precisam ser seguros para chamadas concorrentes. Cache injetado exige `provenance` explícita e versionada; `run_catalog` exige `provider_identity` ao combinar provedor injetado com cache em disco.
+
+Com N candidatos, a referência compara N(N−1)/2 pares; com F unidades globais e S segmentos, avalia F×S relações de suporte. Batching, concorrência limitada e cache reduzem chamadas repetidas; não eliminam esse custo quadrático de construção. Para muitos cenários, reutilize o catálogo e o índice compilado. Uma busca aproximada futura deve medir sua recuperação contra essa referência, pois omissões podem causar falsas perdas.
+
+O resultado estima cobertura de **afirmações presentes nas transcrições**, não verdade externa nem informação visual/sonora ausente do texto. A granularidade e a completude da extração afetam a contagem; a meta lexical `count >= 2` não certifica completude semântica. Equivalências incertas ficam registradas em `comparisons` e podem produzir unidades ainda duplicadas: a contagem não é uma prova de distinção semântica absoluta. Valide equivalências, detalhes, atribuições, datas relativas e cenários de remoção com anotação humana antes de interpretar as contagens como resultado científico.
+
 ## Organização e extensão
 
 O monólito modular segue uma arquitetura orientada a experimentos científicos (Experiment-Driven Architecture). O módulo funcional contém suas regras, caso de uso, portas e adaptadores em diretórios específicos. Os experimentos são unidades explícitas de composição e execução, e o pipeline é reutilizável fora desse módulo:

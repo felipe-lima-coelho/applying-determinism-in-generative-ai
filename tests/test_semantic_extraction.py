@@ -598,7 +598,8 @@ class ExtractionAdapterTests(unittest.TestCase):
 
 class ExtractionConfigurationTests(unittest.TestCase):
     def test_packaged_defaults_and_explicit_toml_overrides(self):
-        self.assertEqual(load_extraction_config(), ExtractionConfig())
+        # O TOML versionado usa 20; o fallback da API em memória continua 10.
+        self.assertEqual(load_extraction_config(), replace(ExtractionConfig(), max_generations_per_segment=20))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "local.toml"
             path.write_text('provider="openai-compatible"\nmodel="offline-custom"\nbase_url="http://127.0.0.1:8080/v1"\nreasoning_effort="omit"\nseed=24\nmax_concurrency=2\nmax_generations_per_segment=7\napi_key_env="LOCAL_KEY"', encoding="utf-8")

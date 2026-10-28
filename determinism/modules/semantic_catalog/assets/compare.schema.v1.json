@@ -1,0 +1,25 @@
+{
+  "type": "json_schema",
+  "name": "catalog_compare_v1",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "comparisons": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pair_id": {"type": "string", "minLength": 1},
+            "relation": {"type": "string", "enum": ["equivalent", "different", "uncertain"]},
+            "reason": {"type": "string", "minLength": 1}
+          },
+          "required": ["pair_id", "relation", "reason"]
+        }
+      }
+    },
+    "required": ["comparisons"]
+  }
+}
