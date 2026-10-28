@@ -74,7 +74,11 @@ class CatalogCliTests(unittest.TestCase):
         ]
         self.input.write_text(json.dumps(self.dataset, ensure_ascii=False), encoding="utf-8")
         self.original_bytes = self.input.read_bytes()
-        self.config = CatalogConfig(max_concurrency=1)
+        self.config = CatalogConfig(max_concurrency=1, method="legacy")
+        # Estes cenários preservam explicitamente a compatibilidade com o v1.
+        legacy_config = patch("determinism.entrypoints.cli.load_catalog_config", return_value=self.config)
+        legacy_config.start()
+        self.addCleanup(legacy_config.stop)
 
     def create_catalog(self, provider=None):
         return run_catalog(self.input, self.catalog_path, provider=provider or ScenarioProvider(), config=self.config)

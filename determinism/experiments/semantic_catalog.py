@@ -7,7 +7,7 @@ from ..modules.semantic_catalog.adapters import (
     CatalogConfig, OpenAICompatibleCatalogProvider, contract_fingerprint, load_catalog_config, read_api_key,
 )
 from ..modules.semantic_catalog.adapters.json_artifacts import JsonResponseCache, read_json, write_json
-from ..modules.semantic_catalog.application import CatalogStage
+from ..modules.semantic_catalog.application import CatalogStage, RequirementCatalogStage
 from ..modules.semantic_catalog.domain import CatalogError, simulate_removal
 from ..modules.text_mapping.adapters import JsonDatasetRepository
 
@@ -30,6 +30,12 @@ class _ConfiguredProvider:
     def assess(self, segment, facts):
         return self._provider().assess(segment, facts)
 
+    def requirements(self, candidate):
+        return self._provider().requirements(candidate)
+
+    def assess_requirements(self, segment, facts):
+        return self._provider().assess_requirements(segment, facts)
+
 
 def _destination(path, *protected):
     destination = Path(path).resolve()
@@ -47,10 +53,13 @@ def _destination(path, *protected):
 
 
 def build_catalog(dataset, *, provider, max_concurrency=4, comparison_batch_size=24,
-                  assessment_batch_size=16, cache=None, provenance=None):
+                  assessment_batch_size=1, cache=None, provenance=None, method="requirements"):
     """API em memória. O provedor e cache são substituíveis; o dataset não é modificado."""
-    return CatalogStage(provider, max_concurrency, comparison_batch_size, assessment_batch_size,
-                        cache, {} if provenance is None else provenance)(dataset)
+    if method not in ("requirements", "legacy"):
+        raise CatalogError("method deve ser requirements ou legacy.")
+    stage = RequirementCatalogStage if method == "requirements" else CatalogStage
+    return stage(provider, max_concurrency, comparison_batch_size, assessment_batch_size,
+                 cache, {} if provenance is None else provenance)(dataset)
 
 
 def run_catalog(input_path, output_path, *, config: CatalogConfig | None = None, provider=None,
@@ -68,6 +77,7 @@ def run_catalog(input_path, output_path, *, config: CatalogConfig | None = None,
         dataset, provider=selected_provider, max_concurrency=selected.max_concurrency,
         comparison_batch_size=selected.comparison_batch_size, assessment_batch_size=selected.assessment_batch_size,
         cache=JsonResponseCache(Path(cache_dir)) if cache_dir is not None else None, provenance=provenance,
+        method=selected.method,
     )
     write_json(destination, catalog)
     return catalog

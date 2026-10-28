@@ -1,0 +1,18 @@
+{
+  "type": "json_schema",
+  "name": "catalog_requirements_v1",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "requirements_by_token": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      }
+    },
+    "required": ["requirements_by_token"]
+  }
+}

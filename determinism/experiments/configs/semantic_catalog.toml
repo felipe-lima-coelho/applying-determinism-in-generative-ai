@@ -1,3 +1,4 @@
+method = "requirements"
 provider = "openai"
 model = "gpt-6-luna"
 base_url = "https://api.openai.com/v1"
@@ -9,5 +10,5 @@ timeout_seconds = 120.0
 max_completion_tokens = 8192
 api_key_env = "OPENAI_API_KEY"
 comparison_batch_size = 24
-assessment_batch_size = 16
+assessment_batch_size = 1
 cache_revision = "1"

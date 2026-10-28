@@ -5,7 +5,7 @@ from collections.abc import Iterable, Set
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from .contracts import CatalogError, SCHEMA_VERSION, validate_catalog
+from .contracts import CatalogError, validate_catalog
 
 
 def _selection(values: Iterable[str], known: Set[str], name: str) -> set[str]:
@@ -45,12 +45,22 @@ class _Support:
 
 
 @dataclass(frozen=True)
+class _Requirement:
+    id: str
+    kind: str
+    text: str
+    confirmed_segments: frozenset[str]
+    possible_segments: frozenset[str]
+
+
+@dataclass(frozen=True)
 class _Fact:
     id: str
     statement: str
     supports: tuple[_Support, ...]
     baseline_supported: bool
     baseline_source_ids: tuple[str, ...]
+    requirements: tuple[_Requirement, ...] = ()
 
 
 class RemovalSimulator:
@@ -62,11 +72,13 @@ class RemovalSimulator:
     """
 
     __slots__ = ("__segments", "__source_segments", "__known_segments", "__facts",
-                 "__catalog_id", "__dataset_fingerprint", "__rejected_count")
+                 "__catalog_id", "__dataset_fingerprint", "__rejected_count", "__schema_version", "__decision_id")
 
     def __init__(self, catalog: object, dataset: object = None):
         snapshot = copy.deepcopy(catalog)
         validated = validate_catalog(snapshot, dataset)
+        self.__schema_version = validated["schema_version"]
+        self.__decision_id = validated.get("decision_id")
         self.__catalog_id = validated["catalog_id"]
         self.__dataset_fingerprint = validated["dataset_fingerprint"]
         self.__rejected_count = len(validated["rejected_facts"])
@@ -81,6 +93,7 @@ class RemovalSimulator:
             source_segments.setdefault(source_id, set()).add(segment_id)
         self.__source_segments = MappingProxyType({key: frozenset(ids) for key, ids in source_segments.items()})
         facts = []
+        candidates = {candidate["id"]: candidate for candidate in validated["candidates"]}
         for fact in sorted(validated["facts"], key=lambda item: item["id"]):
             supports = tuple(
                 _Support(tuple(item["segment_ids"]), frozenset(item["segment_ids"]), item["status"],
@@ -88,7 +101,21 @@ class RemovalSimulator:
                 for item in fact["assessments"] if item["status"] != "not_supported"
             )
             confirmed = tuple(support for support in supports if support.status == "supported")
-            facts.append(_Fact(fact["id"], fact["statement"], supports, bool(confirmed), self.__sources_for(confirmed)))
+            requirements = []
+            if self.__schema_version == 2:
+                for requirement in candidates[fact["candidate_ids"][0]]["requirements"]:
+                    confirmed_segments, possible_segments = set(), set()
+                    for assessment in fact["assessments"]:
+                        result = next(item for item in assessment["requirement_results"]
+                                      if item["requirement_id"] == requirement["id"])
+                        reference = assessment["reference_status"]
+                        if result["status"] == "entailed" and reference == "compatible":
+                            confirmed_segments.update(assessment["segment_ids"])
+                        elif result["status"] in ("entailed", "ambiguous") and reference != "different":
+                            possible_segments.update(assessment["segment_ids"])
+                    requirements.append(_Requirement(requirement["id"], requirement["kind"], requirement["text"],
+                                                     frozenset(confirmed_segments), frozenset(possible_segments)))
+            facts.append(_Fact(fact["id"], fact["statement"], supports, bool(confirmed), self.__sources_for(confirmed), tuple(requirements)))
         self.__facts = tuple(facts)
 
     def __segment_order(self, segment_id):
@@ -97,6 +124,33 @@ class RemovalSimulator:
     def __sources_for(self, supports):
         return tuple(sorted({self.__segments[segment_id][0] for support in supports for segment_id in support.segment_ids},
                             key=lambda source_id: int(source_id[1:])))
+
+    def __requirement_coverage(self, requirements, retained, removed):
+        """Componentes não são contados como novos fatos globais distintos.
+
+        Um segmento pode preservar parte de uma afirmação composta mesmo quando
+        a avaliação da afirmação completa é not_supported por outro requisito.
+        """
+        records = []
+        for requirement in requirements:
+            remaining = requirement.confirmed_segments.intersection(retained)
+            possible = requirement.possible_segments.intersection(retained)
+            baseline = ("supported" if requirement.confirmed_segments else
+                        "uncertain" if requirement.possible_segments else "not_supported")
+            status = "supported" if remaining else "uncertain" if possible else "not_supported"
+            classification = (
+                "uncertain" if baseline != "supported" else
+                "preserved" if remaining else "uncertain" if possible else "lost"
+            )
+            records.append({
+                "requirement_id": requirement.id, "kind": requirement.kind, "text": requirement.text,
+                "classification": classification, "baseline_status": baseline, "remaining_status": status,
+                "baseline_support_segment_ids": sorted(requirement.confirmed_segments, key=self.__segment_order),
+                "remaining_support_segment_ids": sorted(remaining, key=self.__segment_order),
+                "possible_segment_ids": sorted(possible, key=self.__segment_order),
+                "removed_support_segment_ids": sorted(requirement.confirmed_segments.intersection(removed), key=self.__segment_order),
+            })
+        return records
 
     def simulate(
         self,
@@ -110,13 +164,15 @@ class RemovalSimulator:
             removed.update(self.__source_segments[source_id])
         retained = self.__known_segments - removed
         result = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": self.__schema_version,
             "catalog_id": self.__catalog_id,
             "dataset_fingerprint": self.__dataset_fingerprint,
             "removed_segment_ids": sorted(removed, key=self.__segment_order),
             "retained_segment_ids": sorted(retained, key=self.__segment_order),
             "lost_information": [], "preserved_information": [], "uncertain_information": [],
         }
+        if self.__decision_id is not None:
+            result["decision_id"] = self.__decision_id
         for fact in self.__facts:
             surviving = [support for support in fact.supports if support.members.issubset(retained)]
             remaining = [support for support in surviving if support.status == "supported"]
@@ -141,6 +197,8 @@ class RemovalSimulator:
                 "removed_supports": removed_supports,
                 "baseline_source_ids": list(fact.baseline_source_ids), "remaining_source_ids": list(self.__sources_for(remaining)),
             }
+            if self.__schema_version == 2:
+                entry["requirement_coverage"] = self.__requirement_coverage(fact.requirements, retained, removed)
             result[classification].append(entry)
         result["summary"] = {
             "total_information": len(self.__facts),

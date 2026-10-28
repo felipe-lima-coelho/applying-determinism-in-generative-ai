@@ -6,6 +6,7 @@ from .semantic_extraction import (
 )
 from .semantic_grouping import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping
 from .semantic_catalog import build_catalog, run_catalog, run_simulation
+from .catalog_comparison import compare_catalogs, run_catalog_comparison
 from ..modules.semantic_catalog.domain import RemovalSimulator, simulate_removal
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "SemanticExtractionExperiment", "extract_dataset", "extraction_pipeline", "run_extraction",
     "SemanticGroupingExperiment", "group_dataset", "grouping_pipeline", "run_grouping",
     "build_catalog", "run_catalog", "RemovalSimulator", "simulate_removal", "run_simulation",
+    "compare_catalogs", "run_catalog_comparison",
 ]
