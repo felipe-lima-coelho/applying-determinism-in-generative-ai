@@ -1,0 +1,24 @@
+[
+    {
+        "name": "jornal_da_band",
+        "segments": [
+            {
+                "content": "Príncipe Harry e a Duquesa Meghan Markle apareceram em público pela primeira vez com o filho, que nasceu há dois dias."
+            },
+            {
+                "content": "O bebê real recebeu o nome de Archie Harrison. Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo, com temperamento doce. O príncipe brincou e disse que não sabe a quem ele puxou. Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor."
+            }
+        ]
+    },
+    {
+        "name": "jornal_da_record",
+        "segments": [
+            {
+                "content": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real. Foi no colo do pai, sorridente, que o mais novo bebê real foi apresentado ao mundo."
+            },
+            {
+                "content": "E depois de se derreter em elogios à mulher, foi a vez do príncipe Harry ganhar palavras carinhosas da esposa. \"Tem os dois melhores caras do mundo, estou muito feliz\", completa Meghan."
+            }
+        ]
+    }
+]
