@@ -1,4 +1,4 @@
-"""Cache durável pgvector, sem índice ANN: similaridades são locais ao segmento."""
+"""Cache durável pgvector, sem índice ANN: similaridades são calculadas em Python."""
 
 import hashlib
 import json

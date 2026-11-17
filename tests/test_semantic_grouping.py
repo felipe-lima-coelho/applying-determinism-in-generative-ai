@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from determinism.entrypoints.cli import main
-from determinism.experiments import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping
+from determinism.experiments import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping, run_grouping_with_catalog
 from determinism.modules.semantic_grouping.adapters import GroupingConfig
 from determinism.modules.semantic_grouping.adapters.postgres_vectors import canonical_float32
 from determinism.modules.semantic_grouping.domain import (
@@ -204,8 +204,8 @@ class GroupingApplicationTests(unittest.TestCase):
         provider = FakeEmbeddings(vectors)
         self.assertLess(cosine_matrix(tuple(vectors.values()))[0][1], .85)
         self.assertGreater(cosine_matrix(tuple(canonical_float32(vector) for vector in vectors.values()))[0][1], .85)
-        first = group_dataset(dataset(["A", "B"]), provider=provider, vector_store=self.store, profile=self.profile)
-        second = group_dataset(first, provider=provider, vector_store=self.store, profile=self.profile)
+        first = group_dataset(dataset(["A", "B"]), provider=provider, vector_store=self.store, profile=self.profile, threshold=.85)
+        second = group_dataset(first, provider=provider, vector_store=self.store, profile=self.profile, threshold=.85)
         self.assertEqual(first, second)
         self.assertEqual(len(first[0]["segments"][0]["set_different_information"]), 1)
         self.assertEqual(len(provider.calls), 1)
@@ -442,7 +442,7 @@ class GroupingPersistenceTests(unittest.TestCase):
             source.write_text(json.dumps(value), encoding="utf-8")
             with patch("builtins.print") as printing:
                 self.assertEqual(main(["group", str(source), "--env-file", str(Path(directory) / "missing.env")]), 0)
-            self.assertIn("grupos: 0", printing.call_args.args[0])
+            self.assertIn("grupos: 0", printing.call_args_list[0].args[0])
             self.assertEqual(json.loads(source.read_text(encoding="utf-8"))[0]["segments"][0]["set_different_information"], [])
             self.assertEqual(json.loads(source.read_text(encoding="utf-8"))[0]["segments"][0]["canonical_information"], [])
 
@@ -455,9 +455,9 @@ class GroupingPersistenceTests(unittest.TestCase):
             source.write_text(json.dumps(value), encoding="utf-8")
             before = source.read_bytes()
             def injected_run(input_path, output_path, **options):
-                return run_grouping(input_path, output_path, config=options["config"],
+                return run_grouping_with_catalog(input_path, output_path, config=options["config"],
                                     provider=self.provider, vector_store=self.store)
-            with patch("determinism.entrypoints.cli.run_grouping", side_effect=injected_run), patch("builtins.print"):
+            with patch("determinism.entrypoints.cli.run_grouping_with_catalog", side_effect=injected_run), patch("builtins.print"):
                 self.assertEqual(main(["group", str(source), "--output", str(output)]), 0)
                 first = output.read_bytes()
                 self.assertEqual(source.read_bytes(), before)

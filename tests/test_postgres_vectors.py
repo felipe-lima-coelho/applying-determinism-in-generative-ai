@@ -144,8 +144,8 @@ class PostgresIntegrationTests(unittest.TestCase):
                 vectors = {"precision-a": (1, 0), "precision-b": (.8499999999, math.sqrt(1 - .8499999999**2))}
                 return tuple(vectors[text] for text in texts)
         provider = Provider()
-        first = group_dataset(value, provider=provider, vector_store=self.store, profile=profile)
-        second = group_dataset(first, provider=provider, vector_store=self.store, profile=profile)
+        first = group_dataset(value, provider=provider, vector_store=self.store, profile=profile, threshold=.85)
+        second = group_dataset(first, provider=provider, vector_store=self.store, profile=profile, threshold=.85)
         self.assertEqual(first, second)
         self.assertEqual(provider.calls, 1)
         self.assertEqual(len(first[0]["segments"][0]["set_different_information"]), 1)
@@ -181,8 +181,14 @@ class PostgresIntegrationTests(unittest.TestCase):
                 with patch("builtins.print"):
                     self.assertEqual(main(["group", str(source), "--config", str(config)]), 0)
                     first = source.read_bytes()
+                    catalog_path = source.with_name("input.global.json")
+                    first_catalog = catalog_path.read_bytes()
                     self.assertEqual(main(["group", str(source), "--config", str(config)]), 0)
                 self.assertEqual(first, source.read_bytes())
+                self.assertEqual(first_catalog, catalog_path.read_bytes())
+                catalog = json.loads(first_catalog)
+                self.assertEqual(catalog["metadata"]["counts"]["original_information"], 3)
+                self.assertEqual([len(group) for group in catalog["set_different_information"]], [1, 1])
                 self.assertEqual(len(requests), 1)
                 self.assertEqual(requests[0]["input"], ["cli-a", "cli-b"])
         finally:

@@ -1,8 +1,8 @@
-# Cada ocorrência é agrupada somente dentro de seu próprio segmento.
+# Agrupamento local e catálogo global dos representantes locais usam o mesmo limiar.
 provider = "openai"
 model = "text-embedding-3-small"
 base_url = "https://api.openai.com/v1"
-threshold = 0.85
+threshold = 0.90
 batch_size = 32
 timeout_seconds = 60.0
 api_key_env = "OPENAI_API_KEY"

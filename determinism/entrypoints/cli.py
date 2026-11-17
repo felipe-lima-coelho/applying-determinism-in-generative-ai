@@ -4,11 +4,11 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..experiments import run_extraction, run_grouping, run_mapping
+from ..experiments import run_extraction, run_grouping_with_catalog, run_mapping
 from ..experiments.word_mapping import mapping_output_path
 from ..modules.semantic_extraction.adapters import ConfigurationError, load_extraction_config
 from ..modules.semantic_extraction.domain import ExtractionError
-from ..modules.semantic_grouping.adapters import load_grouping_config
+from ..modules.semantic_grouping.adapters import global_catalog_output_path, load_grouping_config
 from ..modules.semantic_grouping.domain import GroupingError
 from ..modules.text_mapping.adapters import DatasetFileError
 from ..modules.text_mapping.domain import DatasetFormatError
@@ -29,9 +29,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     extraction.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada. Salva progresso válido se atingir o limite de cobertura.")
     extraction.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_extraction.toml.")
     extraction.add_argument("--env-file", type=Path, default=Path(".env"), help="Credencial opcional em .env; ambiente tem precedência.")
-    grouping = commands.add_parser("group", help="Agrupa information por complete linkage e escolhe representantes canônicos por segmento.")
+    grouping = commands.add_parser("group", help="Agrupa e canonicaliza por segmento, depois gera o catálogo global dos representantes.")
     grouping.add_argument("input", type=Path, help="Dataset JSON com information em cada segmento.")
     grouping.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada após sucesso total.")
+    grouping.add_argument("--global-output", type=Path, help="Catálogo global; padrão: <destino sem extensão>.global.json.")
     grouping.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_grouping.toml.")
     grouping.add_argument("--env-file", type=Path, default=Path(".env"), help="Credenciais de embeddings/PostgreSQL; ambiente tem precedência.")
     arguments = parser.parse_args(argv)
@@ -45,10 +46,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 config=load_extraction_config(arguments.config), env_file=arguments.env_file,
             )
         elif arguments.command == "group":
-            dataset = run_grouping(
+            result = run_grouping_with_catalog(
                 arguments.input, arguments.output,
+                global_output_path=arguments.global_output,
                 config=load_grouping_config(arguments.config), env_file=arguments.env_file,
             )
+            dataset = result.dataset
     except (DatasetFormatError, DatasetFileError, ExtractionError, ConfigurationError, GroupingError, OSError) as error:
         parser.exit(status=1, message=f"Erro: {error}\n")
 
@@ -64,4 +67,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         groups = sum(len(segment["set_different_information"]) for source in dataset for segment in source["segments"])
         print(f"Agrupamento salvo em {destination} (fontes: {len(dataset)}, segmentos: {segments}, grupos: {groups})")
+        global_destination = arguments.global_output if arguments.global_output is not None else global_catalog_output_path(destination)
+        print(f"Catálogo global salvo em {global_destination} "
+              f"(representantes locais: {len(result.global_catalog['information'])}, "
+              f"informações únicas: {len(result.global_catalog['canonical_information'])})")
     return 0
