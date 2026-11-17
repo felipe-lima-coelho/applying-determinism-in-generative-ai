@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ..experiments import run_catalog, run_extraction, run_grouping, run_mapping, run_simulation
+from ..experiments.word_mapping import mapping_output_path
 from ..modules.semantic_catalog.adapters import load_catalog_config
 from ..modules.semantic_catalog.domain import CatalogError
 from ..modules.semantic_extraction.adapters import ConfigurationError, load_extraction_config
@@ -19,11 +20,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="determinism")
     commands = parser.add_subparsers(dest="command", required=True)
     mapping = commands.add_parser("map", help="Reconstrói map em todos os segmentos.")
-    mapping.add_argument("input", type=Path, help="Dataset JSON de entrada.")
+    mapping.add_argument("input", type=Path, help="Transcrição JSON de entrada em data/transcriptions/; a fonte é preservada.")
     mapping.add_argument(
         "--output",
         type=Path,
-        help="Arquivo de destino. Por padrão, substitui a entrada após concluir o mapeamento.",
+        help="Arquivo de destino, diferente da entrada. Padrão: data/processed/<nome da transcrição>.",
     )
     extraction = commands.add_parser("extract", help="Acumula information até cada token ter pelo menos duas referências.")
     extraction.add_argument("input", type=Path, help="Dataset JSON já mapeado.")
@@ -86,6 +87,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     segments = sum(len(source["segments"]) for source in dataset)
     destination = arguments.output if arguments.output is not None else arguments.input
     if arguments.command == "map":
+        destination = mapping_output_path(arguments.input, arguments.output)
         tokens = sum(len(segment["map"]) for source in dataset for segment in source["segments"])
         print(f"Mapeamento salvo em {destination} (fontes: {len(dataset)}, segmentos: {segments}, palavras: {tokens})")
     elif arguments.command == "extract":

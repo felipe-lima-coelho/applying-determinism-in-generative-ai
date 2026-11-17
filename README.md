@@ -7,16 +7,18 @@ Aplicação Python 3.11 ou superior para experimentos científicos de mestrado. 
 Na raiz do repositório:
 
 ```powershell
-python -m determinism map data/processed/bebe_real_segments.json
+python -m determinism map data/transcriptions/bebe_real_sources.json
 ```
 
-O comando salva o resultado na própria entrada. Para gravar em outro arquivo:
+O comando lê a transcrição base em `data/transcriptions/` e salva a transcrição completa com os mapas em `data/processed/bebe_real_sources.json`, mantendo o mesmo nome e preservando o arquivo original. Para escolher outro destino:
 
 ```powershell
-python -m determinism map data/processed/bebe_real_segments.json --output data/processed/bebe_real_mapped.json
+python -m determinism map data/transcriptions/bebe_real_sources.json --output data/processed/bebe_real_mapped.json
 ```
 
-O diretório de destino deve existir. O arquivo fornecido já contém o mapeamento inicial: **1 fonte, 1 segmento e 21 ocorrências**, além da extração de exemplo. Reexecutar `map` substitui o mapa anterior, inclusive quaisquer valores de `count` existentes. O mesmo conteúdo e a mesma política de tokenização produzem o mesmo resultado. Depois de alterar conteúdo ou política de mapeamento, execute novamente a extração para substituir informações que referenciem o mapa antigo.
+O diretório de destino deve existir. Para entradas em `transcriptions/`, o destino padrão fica no diretório irmão `processed/`, inclusive ao usar caminhos absolutos. Para entradas em outros diretórios, o padrão é `data/processed/<nome do arquivo>`, relativo ao diretório de execução. O destino não pode ser o próprio arquivo de entrada, mesmo com `--output`.
+
+A transcrição base fornecida contém **2 fontes e 4 segmentos**. Reexecutar `map` reconstrói o resultado em `processed` a partir da transcrição base, substituindo o resultado anterior e inicializando todas as contagens em zero. O mesmo conteúdo e a mesma política de tokenização produzem o mesmo resultado. Execute a extração e o agrupamento sobre o arquivo resultante em `processed`; ao recriá-lo a partir da base, essas etapas precisam ser executadas novamente.
 
 Opcionalmente, `python -m pip install -e .` disponibiliza o comando equivalente `determinism map <arquivo>`. Nenhuma chave de API é necessária para esta etapa.
 
@@ -75,14 +77,14 @@ pipeline = Pipeline((MappingStage(UnicodeWordTokenizer()), observe_maps))
 mapped = pipeline.run(dataset)
 ```
 
-Etapas são funções ou objetos chamáveis que recebem e retornam o dataset. Um tokenizador alternativo implementa `tokenize(text)`, devolvendo as palavras em ordem, e pode ser injetado em `MappingStage` ou em `map_dataset(dataset, tokenizer=...)`. `run_mapping(input_path, output_path=None, repository=..., tokenizer=...)` executa entrada, mapeamento e persistência e retorna o próprio resultado em memória. Um repositório alternativo implementa `load(path)` e `save(path, dataset)`.
+Etapas são funções ou objetos chamáveis que recebem e retornam o dataset. Um tokenizador alternativo implementa `tokenize(text)`, devolvendo as palavras em ordem, e pode ser injetado em `MappingStage` ou em `map_dataset(dataset, tokenizer=...)`. `run_mapping(input_path, output_path=None, repository=..., tokenizer=...)` executa entrada, mapeamento e persistência e retorna o próprio resultado em memória. Tanto essa função quanto `WordMappingExperiment.run` usam o mesmo destino padrão da CLI em `processed` e rejeitam a sobrescrita da transcrição de entrada. Um repositório alternativo implementa `load(path)` e `save(path, dataset)`.
 
 ## Extração semântica concorrente
 
 Com `OPENAI_API_KEY` no ambiente ou no arquivo `.env` da raiz (consulte `.env.example`), execute:
 
 ```powershell
-python -m determinism extract data/processed/bebe_real_segments.json
+python -m determinism extract data/processed/bebe_real_sources.json
 ```
 
 O comando processa todos os segmentos de todas as fontes. Ao concluir, substitui a entrada; se atingir o limite de cobertura, salva o progresso validado nesse mesmo destino e termina com erro, indicando as pendências. `--output <arquivo.json>` escolhe outro destino, preservando a entrada; `--config <arquivo.toml>` escolhe outra configuração; `--env-file <arquivo>` escolhe outro arquivo de credencial. O ambiente tem precedência sobre `.env`, inclusive quando a variável estiver vazia. O leitor de `.env` aceita `NOME=valor`, aspas simples/duplas e linhas de comentário; não executa expansão ou código. A credencial não faz parte do TOML nem dos resultados.
@@ -180,7 +182,7 @@ O padrão de [semantic_grouping.toml](determinism/experiments/configs/semantic_g
 python -m pip install -e .
 # Complete o .env existente seguindo .env.example; use uma senha local aleatória.
 docker compose -f compose.semantic-grouping.yaml up -d --wait
-python -m determinism group data/processed/bebe_real_segments.json
+python -m determinism group data/processed/bebe_real_sources.json
 ```
 
 O `.env` ignorado contém `OPENAI_API_KEY` e as variáveis `GROUPING_DB_HOST=127.0.0.1`, `GROUPING_DB_PORT=55432`, `GROUPING_DB_NAME=semantic_grouping`, `GROUPING_DB_USER=grouping` e `GROUPING_DB_PASSWORD`. A senha de exemplo deve ser substituída; não versione credenciais. O ambiente tem precedência sobre `.env`. A CLI aceita `--output <arquivo.json>`, `--config <arquivo.toml>` e `--env-file <arquivo.env>`; sem `--output`, substitui a entrada atomicamente após sucesso integral. O diretório de destino deve existir.
@@ -262,8 +264,8 @@ Com complete linkage e esses mesmos vetores, o resultado continua contendo **6 o
 As etapas `map`, `extract` e `group` continuam independentes e com seus contratos anteriores. A etapa `catalog` constrói um **artefato global separado**, sem modificar o dataset nem substituir `set_different_information`. A unidade de remoção é o segmento; a unidade de cobertura é uma afirmação do catálogo. Um grupo local pode conter vários detalhes e não é tratado como uma informação indivisível.
 
 ```powershell
-python -m determinism catalog data/processed/bebe_real_segments.json --output data/processed/bebe_real_catalog.json
-python -m determinism simulate data/processed/bebe_real_catalog.json --remove s0.seg0 --output data/processed/bebe_real_removal_band_seg0.json --dataset data/processed/bebe_real_segments.json
+python -m determinism catalog data/processed/bebe_real_sources.json --output data/processed/bebe_real_catalog.json
+python -m determinism simulate data/processed/bebe_real_catalog.json --remove s0.seg0 --output data/processed/bebe_real_removal_band_seg0.json --dataset data/processed/bebe_real_sources.json
 ```
 
 `catalog` imprime os IDs dos segmentos: `s0.seg0` significa o segmento de índice 0 da fonte de índice 0, com índices base zero. O nome da fonte é apenas descritivo; fontes com nomes iguais continuam distintas. Os IDs são válidos **dentro do snapshot identificado pelo hash do dataset**; não devem ser reutilizados em outro catálogo sem verificar essa identidade.
@@ -309,7 +311,7 @@ Repetir com o mesmo cache preserva o catálogo byte a byte; reutilização integ
 from determinism.experiments import run_catalog, RemovalSimulator
 
 catalog = run_catalog(
-    "data/processed/bebe_real_segments.json",
+    "data/processed/bebe_real_sources.json",
     "data/processed/bebe_real_catalog.json",
     cache_dir=".cache/semantic_catalog",
 )
@@ -395,7 +397,7 @@ experiment = WordMappingExperiment(
     repository=JsonDatasetRepository(),
 )
 mapped = experiment.run(
-    "data/processed/bebe_real_segments.json",
+    "data/transcriptions/bebe_real_sources.json",
     "data/processed/bebe_real_whitespace.json",
 )
 ```
