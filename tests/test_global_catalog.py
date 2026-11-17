@@ -253,7 +253,8 @@ class GlobalCatalogPersistenceTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             source, output, catalog = root / "input.json", root / "alias.json", root / "catalog-alias.json"
-            primary_target, catalog_target = root / "actual.json", root / "actual-catalog.json"
+            primary_target, catalog_target = root / "actual.json", root / "catalogs" / "actual-catalog.json"
+            catalog_target.parent.mkdir()
             source.write_text(json.dumps(dataset(["A"])), encoding="utf-8")
             primary_target.write_bytes(b"previous-primary")
             catalog_target.write_bytes(b"previous-catalog")
@@ -267,7 +268,9 @@ class GlobalCatalogPersistenceTests(unittest.TestCase):
             self.assertTrue(catalog.is_symlink())
             self.assertEqual(json.loads(primary_target.read_text(encoding="utf-8")), result.dataset)
             self.assertEqual(json.loads(catalog_target.read_text(encoding="utf-8")), result.global_catalog)
-            self.assertEqual(result.global_catalog["metadata"]["dataset_file"], "actual.json")
+            reference = result.global_catalog["metadata"]["dataset_file"]
+            self.assertEqual(reference, "../actual.json")
+            self.assertEqual((catalog_target.parent / reference).resolve(), primary_target.resolve())
 
     def test_failed_second_replacement_restores_existing_or_absent_primary_and_cleans_staging(self):
         for existing in (False, True):

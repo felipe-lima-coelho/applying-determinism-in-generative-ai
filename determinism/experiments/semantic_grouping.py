@@ -133,7 +133,7 @@ def run_grouping_with_catalog(
         strategy=strategy, threshold=selected_config.threshold,
     )
     try:
-        reference = os.path.relpath(destination.resolve(), global_destination.parent.resolve())
+        reference = os.path.relpath(destination.resolve(), global_destination.resolve().parent)
     except ValueError:  # Volumes Windows distintos não admitem um caminho relativo.
         reference = str(destination.resolve())
     catalog["metadata"]["dataset_file"] = Path(reference).as_posix()
