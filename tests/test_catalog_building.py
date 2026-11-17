@@ -61,6 +61,10 @@ class ControlledProvider:
         items = self.extracted.get(segment["id"], [candidate(segment["content"])])
         return self._result("extract", segment, {"facts": copy.deepcopy(items)})
 
+    def embed(self, texts):
+        # Escores iguais mantêm estes cenários focados nas decisões factuais.
+        return self._result("embed", texts, {"embeddings": [[1.0, 0.0] for text in texts]})
+
     def compare(self, pairs):
         items = []
         for pair in pairs:
@@ -88,6 +92,9 @@ class ControlledProvider:
 
 
 class NeverProvider:
+    def embed(self, texts):
+        raise AssertionError("O cache deveria impedir novos embeddings.")
+
     def extract(self, segment):
         raise AssertionError("O cache deveria impedir uma nova extração.")
 

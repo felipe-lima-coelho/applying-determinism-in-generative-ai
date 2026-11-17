@@ -47,6 +47,10 @@ class ScenarioProvider:
             for pair in pairs
         ]}, "fixture-v1")
 
+    def embed(self, texts):
+        self.calls.append("embed")
+        return CatalogResponse({"embeddings": [[1.0, 0.0] for text in texts]}, "fixture-embeddings-v1")
+
     def assess(self, segment, facts):
         self.calls.append("assess")
         items = []

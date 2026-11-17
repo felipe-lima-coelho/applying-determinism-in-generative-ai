@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 from itertools import combinations
 
 from ..domain import CatalogError, catalog_digest, dataset_digest, validate_catalog
+from ..domain.clustering import APPLICATION_REVISION, complete_linkage, cosine_matrix, validate_embeddings, validate_threshold
 from ..ports.cache import ResponseCache
+from ..ports.embeddings import CatalogEmbeddingProvider
 from ..ports.provider import CatalogProvider, CatalogResponse
 from ...text_mapping.domain import validate_dataset
 
@@ -136,21 +138,6 @@ def _batches(items, size):
         yield items[start:start + size]
 
 
-def _partition(candidates, comparisons):
-    """Ligação completa sobre equivalências: nunca usa fechamento transitivo."""
-    equivalent = {frozenset((pair["left_id"], pair["right_id"])) for pair in comparisons if pair["relation"] == "equivalent"}
-    groups = [(index,) for index in range(len(candidates))]
-    while True:
-        merge = next(((i, j) for i in range(len(groups)) for j in range(i + 1, len(groups))
-                      if all(frozenset((candidates[a]["id"], candidates[b]["id"])) in equivalent
-                             for a in groups[i] for b in groups[j])), None)
-        if merge is None:
-            return groups
-        i, j = merge
-        union = tuple(sorted((*groups[i], *groups[j])))
-        groups = sorted([group for position, group in enumerate(groups) if position not in (i, j)] + [union])
-
-
 @dataclass(frozen=True)
 class CatalogStage:
     provider: CatalogProvider
@@ -159,6 +146,10 @@ class CatalogStage:
     assessment_batch_size: int = 16
     cache: ResponseCache | None = None
     provenance: dict = field(default_factory=dict)
+    embedding_provider: CatalogEmbeddingProvider | None = None
+    similarity_threshold: float = 0.85
+    embedding_batch_size: int = 32
+    embedding_dimensions: int | None = None
 
     def __post_init__(self):
         if not isinstance(self.provenance, dict):
@@ -169,20 +160,32 @@ class CatalogStage:
             json.dumps(self.provenance, allow_nan=False)
         except (TypeError, ValueError):
             raise CatalogError("provenance deve conter somente dados JSON finitos.") from None
+        validate_threshold(self.similarity_threshold)
         for name in ("max_concurrency", "comparison_batch_size", "assessment_batch_size"):
             value = getattr(self, name)
             if type(value) is not int or not 1 <= value <= 256:
                 raise CatalogError(f"{name} deve estar entre 1 e 256.")
+        if type(self.embedding_batch_size) is not int or not 1 <= self.embedding_batch_size <= 2048:
+            raise CatalogError("embedding_batch_size deve estar entre 1 e 2048.")
+        if self.embedding_dimensions is not None and (type(self.embedding_dimensions) is not int or not 1 <= self.embedding_dimensions <= 16000):
+            raise CatalogError("embedding_dimensions deve estar entre 1 e 16000.")
 
     def _invoke(self, operation, arguments, validate):
         request = {"operation": operation, "arguments": arguments, "provenance": self.provenance,
-                   "application_revision": "catalog-v1"}
+                   "application_revision": APPLICATION_REVISION,
+                   "clustering_parameters": {"similarity_threshold": self.similarity_threshold,
+                                             "embedding_dimensions": self.embedding_dimensions,
+                                             "embedding_batch_size": self.embedding_batch_size}}
         key = hashlib.sha256(json.dumps(request, ensure_ascii=True, sort_keys=True, allow_nan=False,
                                         separators=(",", ":")).encode()).hexdigest()
         response = self.cache.get(key) if self.cache is not None else None
         cached = response is not None
         if response is None:
-            response = getattr(self.provider, operation)(*copy.deepcopy(arguments))
+            selected = self.embedding_provider if operation == "embed" and self.embedding_provider is not None else self.provider
+            method = getattr(selected, operation, None)
+            if method is None:
+                raise CatalogError("O catálogo v2 exige embedding_provider com embed(texts) retornando CatalogResponse; consulte a migração no README.")
+            response = method(*copy.deepcopy(arguments))
         if not isinstance(response, CatalogResponse):
             raise CatalogError("O provedor deve retornar CatalogResponse.")
         for value in (response.model, response.system_fingerprint):
@@ -230,6 +233,18 @@ class CatalogStage:
                 seen[item["statement"]] = candidate
 
         by_segment = {segment["id"]: segment for segment in segments}
+        unique_texts = list(dict.fromkeys(candidate["statement"] for candidate in candidates))
+        jobs = [("embed", (batch,), lambda payload, batch=batch: validate_embeddings(payload, len(batch), self.embedding_dimensions))
+                for batch in _batches(unique_texts, self.embedding_batch_size)]
+        vectors = []
+        for items, trace in self._run_jobs(jobs):
+            vectors.extend(items)
+            traces.append(trace)
+        dimension = len(vectors[0]) if vectors else None
+        if any(len(vector) != dimension for vector in vectors):
+            raise CatalogError("Dimensões de embeddings incompatíveis entre lotes do mesmo perfil.")
+        by_text = dict(zip(unique_texts, vectors))
+        matrix = cosine_matrix([by_text[candidate["statement"]] for candidate in candidates])
         pairs = []
         for index, (left, right) in enumerate(combinations(candidates, 2)):
             def contextual(candidate):
@@ -237,11 +252,20 @@ class CatalogStage:
                 return {**candidate, "content": segment["content"], "source_metadata": segment["source_metadata"],
                         "segment_metadata": segment["segment_metadata"]}
             pairs.append({"pair_id": f"p{index}", "left": contextual(left), "right": contextual(right)})
+        candidate_indices = {candidate["id"]: index for index, candidate in enumerate(candidates)}
+        comparisons = [{"pair_id": pair["pair_id"], "left_id": pair["left"]["id"], "right_id": pair["right"]["id"],
+                        "similarity": matrix[candidate_indices[pair["left"]["id"]]][candidate_indices[pair["right"]["id"]]],
+                        "relation": "below_threshold", "reason": "Par abaixo do limiar; equivalência factual não avaliada.",
+                        "context_decision": None, "statement_decision": None} for pair in pairs]
+        by_pair = {item["pair_id"]: item for item in comparisons}
+        eligible_pairs = [pair for pair in pairs if by_pair[pair["pair_id"]]["similarity"] >= self.similarity_threshold]
         jobs = [("compare", (batch,), lambda payload, batch=batch: _comparisons(payload, batch))
-                for batch in _batches(pairs, self.comparison_batch_size)]
-        comparisons = []
+                for batch in _batches(eligible_pairs, self.comparison_batch_size)]
         for items, trace in self._run_jobs(jobs):
-            comparisons.extend(items)
+            for item in items:
+                record = by_pair[item["pair_id"]]
+                record.update(relation=item["relation"], reason=item["reason"],
+                              context_decision={"relation": item["relation"], "reason": item["reason"]})
             traces.append(trace)
         # A coocorrência no mesmo trecho não pode tornar um fato e seu detalhe
         # equivalentes. Confirma propostas de fusão usando somente as afirmações.
@@ -251,7 +275,7 @@ class CatalogStage:
              **{side: {"id": pair[side]["id"], "segment_id": pair[side]["segment_id"],
                        "statement": pair[side]["statement"], "content": pair[side]["statement"],
                        "source_metadata": {}, "segment_metadata": {}} for side in ("left", "right")}}
-            for pair in pairs if pair["pair_id"] in proposed
+            for pair in eligible_pairs if pair["pair_id"] in proposed
         ]
         jobs = [("compare", (batch,), lambda payload, batch=batch: _comparisons(payload, batch))
                 for batch in _batches(isolated_pairs, self.comparison_batch_size)]
@@ -263,14 +287,15 @@ class CatalogStage:
             checked = verification.get(item["pair_id"])
             if checked is not None:
                 item["relation"] = checked["relation"]
+                item["statement_decision"] = {"relation": checked["relation"], "reason": checked["reason"]}
                 item["reason"] = f"Contexto: {item['reason']} Verificação das afirmações isoladas: {checked['reason']}"
-        facts = []
-        for group in _partition(candidates, comparisons):
-            members = [candidates[index] for index in group]
-            # Representante real, sem síntese que possa apagar qualificações.
-            facts.append({"id": f"f{len(facts)}", "statement": members[0]["statement"],
-                          "candidate_ids": [member["id"] for member in members], "assessments": []})
+        groups, merges, representatives = complete_linkage([item["id"] for item in candidates], comparisons, self.similarity_threshold)
         by_candidate = {candidate["id"]: candidate for candidate in candidates}
+        facts = []
+        for group, representative in zip(groups, representatives):
+            # Representante real, sem síntese que possa apagar qualificações.
+            facts.append({"id": f"f{len(facts)}", "statement": by_candidate[representative]["statement"],
+                          "canonical_candidate_id": representative, "candidate_ids": group, "assessments": []})
         assessments_input = [{"id": fact["id"], "statement": fact["statement"],
                               "origin_contexts": [{"segment_id": by_candidate[key]["segment_id"],
                                                    "statement": by_candidate[key]["statement"],
@@ -290,12 +315,18 @@ class CatalogStage:
         accepted, rejected = [], []
         for fact in facts:
             (accepted if any(item["status"] != "not_supported" for item in fact["assessments"]) else rejected).append(fact)
-        catalog = {"schema_version": 1, "catalog_id": "", "dataset_fingerprint": dataset_digest(dataset),
-                   "policy": {"equivalence": "exhaustive_complete_link", "support": "independent_segments",
-                              "uncertainty": "explicit", "canonical_statement": "first_candidate",
+        catalog = {"schema_version": 2, "catalog_id": "", "dataset_fingerprint": dataset_digest(dataset),
+                   "policy": {"equivalence": "threshold_gated_factual_complete_link", "support": "independent_segments",
+                              "uncertainty": "explicit", "canonical_statement": "cosine_medoid",
                               "merge_verification": "context_and_statement_only_agreement",
                               "scope": "transcript_claims_not_external_fact_checking"},
-                   "provenance": {**copy.deepcopy(self.provenance), "application_revision": "catalog-v1", "calls": traces},
+                   "provenance": {**copy.deepcopy(self.provenance), "application_revision": APPLICATION_REVISION, "calls": traces},
+                   "clustering": {"algorithm": "global_hac_complete_link", "metric": "cosine",
+                                  "similarity_threshold": self.similarity_threshold,
+                                  "tie_break": "candidate_snapshot_index", "representative": "cosine_medoid",
+                                  "embedding_dimension": dimension,
+                                  "embedding_inputs": [hashlib.sha256(text.encode("utf-8")).hexdigest() for text in unique_texts],
+                                  "merges": merges},
                    "segments": segments, "candidates": candidates, "comparisons": comparisons,
                    "facts": accepted, "rejected_facts": rejected}
         catalog["catalog_id"] = catalog_digest(catalog)
