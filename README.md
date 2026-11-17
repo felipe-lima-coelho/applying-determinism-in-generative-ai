@@ -279,19 +279,13 @@ Sem seletores, `simulate` relata a cobertura original. IDs desconhecidos são er
 
 ### Construção do catálogo
 
-O método padrão `method="requirements"` produz catálogos de versão 2. Ele usa as unidades já disponíveis em `information`, sem uma segunda extração livre de `content`. A fonte original continua sendo a referência para validar suporte; uma informação extraída anteriormente não se torna verdadeira por estar no inventário.
-
-1. Valida toda a entrada e registra os segmentos, conteúdo, mapas, informações, grupos e metadados. O inventário preserva as formulações e suas referências de origem, unindo apenas duplicatas textuais do mesmo segmento. Os candidatos recebem IDs derivados de conteúdo e origem. Nenhum grupo local por embedding elimina automaticamente qualificadores ou unidades candidatas.
-2. Extrai automaticamente os requisitos de cada afirmação fixa, classificando participantes, predicado, atribuição, polaridade, modalidade e qualificadores. O modelo seleciona IDs de palavras da própria afirmação; o código constrói o texto e os IDs dos requisitos. A cobertura integral desses tokens é validada, mas cobertura lexical não prova que a decomposição semântica está correta.
+1. Valida toda a entrada e registra os segmentos, conteúdo, mapas, informações, grupos e metadados. `content` é obrigatório; extrações e grupos anteriores são opcionais e funcionam como pistas. A revisão considera também conteúdo que a extração anterior possa ter omitido.
+2. Extrai unidades com formulações explícitas e evidências literais de `content`. As evidências recebem offsets de caracteres Unicode, com início inclusivo e fim exclusivo; todas as ocorrências de uma citação repetida são registradas. `information_indices` liga cada candidato a ocorrências anteriores quando essa associação foi identificada.
 3. Compara todos os pares de candidatos, inclusive dentro da mesma fonte. O avaliador classifica cada par como `equivalent`, `different` ou `uncertain`. Equivalência exige o mesmo conteúdo factual nas duas direções. Similaridade temática ou implicação somente em uma direção não autoriza a fusão.
-4. Confirma cada proposta de equivalência em uma segunda comparação, usando somente as afirmações isoladas. Só então forma grupos por ligação completa sobre as decisões de equivalência, independentemente do limiar de embeddings da etapa `group`. Todo par de um grupo deve ser equivalente nas duas verificações. Relações incertas não fundem unidades; cadeias A–B–C não implicam A–C. A formulação canônica vem de um candidato real, sem nova síntese.
-5. Avalia cada unidade global contra cada segmento, requisito por requisito, com evidências literais. Cada requisito recebe `entailed`, `absent`, `contradicted` ou `ambiguous`; a compatibilidade das referências é avaliada separadamente. O código calcula o suporte final: ausência/contradição ou referência incompatível produz `not_supported`; caso contrário, ambiguidade produz `uncertain`; todos os requisitos satisfeitos e referências compatíveis produzem `supported`. Um detalhe ausente não é compensado por uma dúvida de referência.
+4. Confirma cada proposta de equivalência em uma segunda comparação, usando somente as afirmações isoladas. Isso reduz o risco de importar detalhes do trecho e fundir, por exemplo, um evento com sua data. Só então forma grupos por ligação completa **sobre as decisões de equivalência**, independentemente do limiar de embeddings da etapa `group`. Todo par de um grupo deve ser equivalente nas duas verificações. Relações incertas não fundem unidades; cadeias A–B–C não implicam A–C. Empates seguem a ordem dos candidatos. A formulação canônica é a do primeiro membro, sem nova síntese.
+5. Avalia cada unidade global contra cada segmento. `supported` significa suporte completo, `uncertain` indica possível suporte com ambiguidade, e `not_supported` indica ausência, detalhe não sustentado ou contradição. Todos os segmentos precisam ter uma decisão explícita; respostas incompletas não são tratadas como negativas. Unidades sem nenhum suporte confirmado ou possível ficam em `rejected_facts`, preservadas para auditoria e excluídas das contagens de perda.
 
-O artefato v2 contém `segments`, `candidates`, `comparisons`, `facts`, `rejected_facts`, `policy`, `provenance`, `dataset_fingerprint`, `catalog_id` e `decision_id`. As avaliações preservam os resultados de cada requisito, as evidências e a decisão derivada. As evidências têm offsets de caracteres Unicode, com início inclusivo e fim exclusivo. O contexto literal ligado a um candidato identifica sua origem; a confirmação de suporte depende das avaliações, não dessa ligação de origem.
-
-`catalog_id` identifica o artefato completo. `decision_id` identifica as unidades, requisitos, relações, agrupamentos e decisões de suporte, ignorando evidências, justificativas e metadados de execução. Hashes detectam alterações e identificam snapshots; não são assinaturas nem certificam correção semântica. Unidades sem suporte confirmado ou possível ficam em `rejected_facts`, preservadas para auditoria e excluídas das contagens de perda.
-
-`method="legacy"` permite executar o método anterior, com extração livre no catálogo e schema v1. Catálogos v1 salvos continuam aceitos pelo simulador. As versões representam políticas diferentes e não devem ser misturadas na mesma comparação de estabilidade.
+O artefato contém `segments`, `candidates`, `comparisons`, `facts`, `rejected_facts`, `policy`, `provenance`, `dataset_fingerprint` e `catalog_id`. Cada fato liga seus candidatos às avaliações, evidências e justificativas. Hashes detectam alterações e identificam snapshots; não são assinaturas nem certificam a correção semântica. A validação estrutural confirma evidências literais, referências, partição e cobertura das avaliações, mas o modelo ainda pode errar na interpretação.
 
 ### Perda, preservação e incerteza
 
@@ -299,33 +293,15 @@ Uma informação originalmente confirmada fica **preservada** se algum suporte c
 
 Os relatórios contêm `lost_information`, `preserved_information`, `uncertain_information` e `summary`. Cada entrada inclui a afirmação, evidências restantes confirmadas e possíveis, suportes interrompidos, segmentos faltantes e fontes antes/depois. A redução de fontes é registrada separadamente da perda de conteúdo. Não se somam perdas individuais: remover A ou B pode preservar um fato, enquanto remover ambos pode eliminá-lo.
 
-Nos relatórios v2, `requirement_coverage` mostra também quais componentes de cada afirmação permanecem preservados, perdidos ou incertos, com seus segmentos de suporte. Uma afirmação composta pode deixar de ser sustentada integralmente enquanto parte de seu conteúdo permanece: em “A ponte abriu na terça-feira”, a abertura pode continuar presente e somente o dia ser perdido. Esses componentes não são novas afirmações globais autônomas e não aumentam `total_information`; a contagem principal continua medindo as unidades extraídas. A CLI exibe os componentes das afirmações perdidas para tornar essa perda parcial visível.
-
-A construção automática verifica **suporte independente por segmento**. Referências que só possam ser resolvidas com outro segmento devem produzir incerteza; o contexto de origem de uma informação não pode preencher lacunas do segmento avaliado. O simulador continua aceitando os suportes conjuntos do formato v1: todos os `segment_ids` daquela evidência precisam sobreviver. O catálogo v2 utiliza avaliações independentes de um segmento por vez.
+A construção automática verifica **suporte independente por segmento**. Referências que só possam ser resolvidas com outro segmento devem produzir incerteza; o contexto de origem de uma informação não pode preencher lacunas do segmento avaliado. O formato e o simulador também aceitam avaliações de suporte conjunto: nesse caso, todos os `segment_ids` daquela evidência precisam sobreviver. Esses conjuntos não são inferidos automaticamente nesta versão.
 
 ### Configuração, cache e execução local
 
-`--config` seleciona um TOML; o padrão é `determinism/experiments/configs/semantic_catalog.toml`. O avaliador padrão usa `gpt-6-luna`, temperatura 0, seed 42, concorrência 4, lotes de 24 comparações e uma avaliação, até 8192 tokens de saída e timeout de 120 segundos. `--env-file` e `api_key_env` seguem as regras existentes, com precedência do ambiente. Para servidor local, configure `provider="openai-compatible"`, `model`, `base_url` e, se necessário, `reasoning_effort="omit"`. O catálogo não depende do PostgreSQL nem faz chamadas de embeddings; esta implementação é uma referência semântica exaustiva.
+`--config` seleciona um TOML; o padrão é `determinism/experiments/configs/semantic_catalog.toml`. O avaliador padrão usa `gpt-6-luna`, temperatura 0, seed 42, concorrência 4, lotes de 24 comparações e 16 avaliações, até 8192 tokens de saída e timeout de 120 segundos. `--env-file` e `api_key_env` seguem as regras existentes, com precedência do ambiente. Para servidor local, configure `provider="openai-compatible"`, `model`, `base_url` e, se necessário, `reasoning_effort="omit"`. O catálogo não depende do PostgreSQL nem faz chamadas de embeddings; esta implementação é uma referência semântica exaustiva.
 
 O cache padrão da CLI fica em `.cache/semantic_catalog`, ignorado pelo Git. `--cache-dir` escolhe outro local e `--no-cache` força novas avaliações. Cada resposta validada é persistida atomicamente, identificada pela operação, dados, configuração, revisão e hash dos prompts/schemas. Falhas não substituem o catálogo anterior; respostas já validadas permitem retomar a execução. Não há retries silenciosos. `cache_revision` deve mudar ao trocar pesos locais com o mesmo nome e endpoint. O cache contém textos e decisões do corpus, mas não credenciais.
 
 Repetir com o mesmo cache preserva o catálogo byte a byte; reutilização integral não exige credencial nem rede. Novas inferências não têm garantia de determinismo. Prompts, schemas, configuração, modelo retornado e `system_fingerprint`, quando disponível, ficam identificados na proveniência.
-
-### Comparar decisões de duas execuções
-
-Para avaliar inferências novas, gere os catálogos em arquivos separados usando `--no-cache`. Em seguida, compare as decisões do mesmo snapshot, sem novas chamadas ao modelo:
-
-```powershell
-python -m determinism catalog data/processed/bebe_real_segments.json --output data/processed/catalog_first.json --no-cache
-python -m determinism catalog data/processed/bebe_real_segments.json --output data/processed/catalog_second.json --no-cache
-python -m determinism compare-catalogs data/processed/catalog_first.json data/processed/catalog_second.json --output data/processed/catalog_comparison.json --fail-on-difference
-```
-
-`compare-catalogs` exige dois catálogos v2 do mesmo dataset. O relatório separa diferenças de inventário, requisitos, equivalências, grupos, representantes e suporte. Ele também distingue igualdade das decisões (`same_decisions`), igualdade do artefato (`same_catalog_content`) e igualdade dos bytes dos arquivos (`same_file_bytes`). Não alinha IDs posicionais de versões antigas nem confunde a variação de uma explicação com uma nova decisão semântica.
-
-Com `--fail-on-difference`, o comando grava o diagnóstico e retorna código 2 se as decisões mudarem; código 0 significa decisões iguais, mesmo quando citações ou formatação diferem. Código 1 indica erro de entrada ou execução. Esse controle pode interromper uma rotina antes de promover a nova versão: a comparação nunca substitui ou escolhe automaticamente um dos catálogos. `inference_instability` descreve divergência entre execuções; a categoria `uncertain` do simulador continua descrevendo suporte textual ambíguo.
-
-A API equivalente é `compare_catalogs(first, second)` para objetos em memória ou `run_catalog_comparison(first_path, second_path, output_path)` para arquivos. As inferências automáticas de requisitos e equivalência continuam sujeitas a erro e variação. Reprodutibilidade exata de um resultado publicado exige preservar o catálogo e suas decisões; concordância entre poucas chamadas não garante determinismo geral.
 
 ### API Python e vários cenários
 
@@ -344,7 +320,7 @@ fonte = simulator.simulate(removed_source_ids=["s0"])
 print(conjunta["lost_information"])
 ```
 
-`simulate_removal(catalog, ...)` é a alternativa para um único cenário. Nenhuma simulação usa modelos. `RemovalSimulator` mantém um índice imutável e não revalida a matriz de candidatos a cada consulta. `build_catalog(dataset, provider=...)` permite trocar o avaliador. O método por requisitos usa as portas `requirements`, `compare` e `assess_requirements`; o método legado usa `extract`, `compare` e `assess`. Provedores precisam ser seguros para chamadas concorrentes. Cache injetado exige `provenance` explícita e versionada; `run_catalog` exige `provider_identity` ao combinar provedor injetado com cache em disco.
+`simulate_removal(catalog, ...)` é a alternativa para um único cenário. Nenhuma simulação usa modelos. `RemovalSimulator` mantém um índice imutável e não revalida a matriz de candidatos a cada consulta. `build_catalog(dataset, provider=...)` e `CatalogStage` permitem trocar o avaliador por implementações das portas `extract`, `compare` e `assess`. Provedores precisam ser seguros para chamadas concorrentes. Cache injetado exige `provenance` explícita e versionada; `run_catalog` exige `provider_identity` ao combinar provedor injetado com cache em disco.
 
 Com N candidatos, a referência compara N(N−1)/2 pares; com F unidades globais e S segmentos, avalia F×S relações de suporte. Batching, concorrência limitada e cache reduzem chamadas repetidas; não eliminam esse custo quadrático de construção. Para muitos cenários, reutilize o catálogo e o índice compilado. Uma busca aproximada futura deve medir sua recuperação contra essa referência, pois omissões podem causar falsas perdas.
 

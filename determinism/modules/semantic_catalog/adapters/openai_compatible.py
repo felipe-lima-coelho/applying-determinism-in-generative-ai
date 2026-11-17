@@ -1,6 +1,5 @@
 """Inferência estruturada para extração, equivalência e suporte entre segmentos."""
 
-import copy
 import json
 import re
 import urllib.error
@@ -10,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..ports import CatalogInferenceError, CatalogResponse
-from ..domain.requirements import REQUIREMENT_KINDS
 from .configuration import CatalogConfig, ConfigurationError
 from .prompts import structured_output, system_prompt
 
@@ -39,120 +37,6 @@ def _safe_identifier(value: object) -> str | None:
     return value if isinstance(value, str) and re.fullmatch(r"[a-zA-Z0-9_.\[\]-]{1,100}", value) else None
 
 
-def _requirements_contract(template: dict, data: dict) -> dict:
-    """Exige uma atribuição para cada token no próprio schema da resposta.
-
-    O template permanece imutável; cada requisição tem seu schema independente,
-    inclusive quando vários workers constroem contratos de tamanhos diferentes.
-    """
-    candidate = data.get("candidate") if isinstance(data, dict) else None
-    tokens = candidate.get("statement_tokens") if isinstance(candidate, dict) else None
-    if (not isinstance(tokens, list) or not tokens
-            or any(not isinstance(token, dict) or type(token.get("id")) is not int
-                   or token["id"] != index for index, token in enumerate(tokens))):
-        raise CatalogInferenceError("requirements exige statement_tokens não vazios com IDs consecutivos a partir de zero.")
-    assignment = {
-        "type": "object", "additionalProperties": False,
-        "properties": {
-            "kind": {"type": "string", "enum": sorted(REQUIREMENT_KINDS)},
-            "group": {"type": "integer", "minimum": 0, "maximum": len(tokens) - 1},
-        },
-        "required": ["kind", "group"],
-    }
-    contract = copy.deepcopy(template)
-    contract["schema"]["$defs"] = {"requirement_assignment": assignment}
-    schema = contract["schema"]["properties"]["requirements_by_token"]
-    token_assignments = {
-        "type": "array", "minItems": 1, "maxItems": len(tokens),
-        "items": {"$ref": "#/$defs/requirement_assignment"},
-    }
-    schema["properties"] = {f"t{index}": copy.deepcopy(token_assignments) for index in range(len(tokens))}
-    schema["required"] = list(schema["properties"])
-    return contract
-
-
-def _records_by_id(value: object, field: str) -> dict:
-    if not isinstance(value, list) or not value:
-        raise CatalogInferenceError("O contrato dinâmico exige uma lista não vazia de IDs.")
-    result = {}
-    for item in value:
-        identifier = item.get(field) if isinstance(item, dict) else None
-        if not isinstance(identifier, str) or not identifier.strip() or identifier in result:
-            raise CatalogInferenceError("O contrato dinâmico exige IDs textuais, não vazios e distintos.")
-        result[identifier] = item
-    return result
-
-
-def _required_mapping(properties: dict) -> dict:
-    return {"type": "object", "additionalProperties": False, "properties": properties, "required": list(properties)}
-
-
-def _comparison_contract(template: dict, data: dict) -> dict:
-    pairs = _records_by_id(data.get("pairs") if isinstance(data, dict) else None, "pair_id")
-    contract = copy.deepcopy(template)
-    result = _required_mapping({
-        "relation": {"type": "string", "enum": ["equivalent", "different", "uncertain"]},
-        "reason": {"type": "string", "minLength": 1},
-    })
-    mapping = _required_mapping({identifier: {"$ref": "#/$defs/comparison"} for identifier in pairs})
-    contract["schema"] = _required_mapping({"comparisons": mapping})
-    contract["schema"]["$defs"] = {"comparison": result}
-    return contract
-
-
-def _assessment_contract(template: dict, data: dict) -> dict:
-    facts = _records_by_id(data.get("facts") if isinstance(data, dict) else None, "id")
-    contract = copy.deepcopy(template)
-    result = _required_mapping({
-        "status": {"type": "string", "enum": ["entailed", "absent", "contradicted", "ambiguous"]},
-        "evidence_quotes": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    })
-    fact_schemas = {}
-    for identifier, fact in facts.items():
-        requirements = _records_by_id(fact.get("requirements"), "id")
-        fact_schemas[identifier] = _required_mapping({
-            "reference_status": {"type": "string", "enum": ["compatible", "ambiguous", "different"]},
-            "requirements": _required_mapping({key: {"$ref": "#/$defs/requirement_assessment"} for key in requirements}),
-        })
-    contract["schema"] = _required_mapping({"assessments": _required_mapping(fact_schemas)})
-    contract["schema"]["$defs"] = {"requirement_assessment": result}
-    return contract
-
-
-def _normalize_wire_response(operation: str, response: CatalogResponse) -> CatalogResponse:
-    """Converte mapas completos de IDs para as listas da porta de aplicação.
-
-    Não preenche entradas ausentes e não descarta campos inesperados. Servidores
-    compatíveis que ainda devolvem listas continuam sujeitos à validação normal.
-    """
-    payload = response.payload
-    if not isinstance(payload, dict):
-        return response
-    if operation == "compare" and set(payload) == {"comparisons"} and isinstance(payload["comparisons"], dict):
-        comparisons = []
-        for identifier, item in payload["comparisons"].items():
-            if not isinstance(item, dict) or set(item) != {"relation", "reason"}:
-                raise CatalogInferenceError("Campos inválidos no mapa de comparações do provedor.")
-            comparisons.append({"pair_id": identifier, **item})
-        payload = {"comparisons": comparisons}
-    elif operation == "assess_requirements" and set(payload) == {"assessments"} and isinstance(payload["assessments"], dict):
-        assessments = []
-        for identifier, item in payload["assessments"].items():
-            if (not isinstance(item, dict) or set(item) != {"reference_status", "requirements"}
-                    or not isinstance(item["requirements"], dict)):
-                raise CatalogInferenceError("Campos inválidos no mapa de avaliações do provedor.")
-            requirements = []
-            for key, requirement in item["requirements"].items():
-                if not isinstance(requirement, dict) or set(requirement) != {"status", "evidence_quotes"}:
-                    raise CatalogInferenceError("Campos inválidos no mapa de requisitos avaliados do provedor.")
-                requirements.append({"requirement_id": key, **requirement})
-            assessments.append({"fact_id": identifier, "reference_status": item["reference_status"], "requirements": requirements})
-        payload = {"assessments": assessments}
-    else:
-        return response
-    return CatalogResponse(payload, response.model, response.system_fingerprint)
-
-
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -173,12 +57,6 @@ class OpenAICompatibleCatalogProvider:
 
     def build_request_body(self, operation: str, data: dict) -> dict[str, Any]:
         contract = structured_output(operation)
-        if operation == "requirements":
-            contract = _requirements_contract(contract, data)
-        elif operation == "compare":
-            contract = _comparison_contract(contract, data)
-        elif operation == "assess_requirements":
-            contract = _assessment_contract(contract, data)
         return {
             "model": self.config.model,
             "messages": [
@@ -204,12 +82,6 @@ class OpenAICompatibleCatalogProvider:
 
     def assess(self, segment: dict, facts: Sequence[dict]) -> CatalogResponse:
         return self._request("assess", {"segment": segment, "facts": list(facts)})
-
-    def requirements(self, candidate: dict) -> CatalogResponse:
-        return self._request("requirements", {"candidate": candidate})
-
-    def assess_requirements(self, segment: dict, facts: Sequence[dict]) -> CatalogResponse:
-        return self._request("assess_requirements", {"segment": segment, "facts": list(facts)})
 
     def _request(self, operation: str, data: dict) -> CatalogResponse:
         body = json.dumps(self.build_request_body(operation, data), ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -256,7 +128,7 @@ class OpenAICompatibleCatalogProvider:
             envelope = _decode_json(raw)
         except (ValueError, UnicodeError):
             raise CatalogInferenceError("O provedor retornou uma resposta HTTP que não é JSON válido.") from None
-        return _normalize_wire_response(operation, self._parse_response(envelope))
+        return self._parse_response(envelope)
 
     @staticmethod
     def _parse_response(envelope: object) -> CatalogResponse:

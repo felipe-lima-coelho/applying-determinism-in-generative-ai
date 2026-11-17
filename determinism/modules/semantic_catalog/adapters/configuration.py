@@ -13,7 +13,6 @@ from ...semantic_extraction.adapters.configuration import (
 
 @dataclass(frozen=True)
 class CatalogConfig:
-    method: str = "requirements"
     provider: str = "openai"
     model: str = "gpt-6-luna"
     base_url: str = "https://api.openai.com/v1"
@@ -25,12 +24,10 @@ class CatalogConfig:
     max_completion_tokens: int = 8192
     api_key_env: str = "OPENAI_API_KEY"
     comparison_batch_size: int = 24
-    assessment_batch_size: int = 1
+    assessment_batch_size: int = 16
     cache_revision: str = "1"
 
     def __post_init__(self) -> None:
-        if not isinstance(self.method, str) or self.method not in ("requirements", "legacy"):
-            raise ConfigurationError("method deve ser requirements ou legacy.")
         # Compartilha a política já usada pelos adaptadores de Chat Completions,
         # sem herdar parâmetros específicos da cobertura lexical da extração.
         common = {item.name for item in fields(ExtractionConfig)} - {"max_generations_per_segment"}

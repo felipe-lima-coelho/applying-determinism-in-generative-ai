@@ -15,7 +15,6 @@ class CatalogError(ValueError):
 
 
 SCHEMA_VERSION = 1
-REQUIREMENTS_SCHEMA_VERSION = 2
 _CATALOG_FIELDS = {
     "schema_version", "catalog_id", "dataset_fingerprint", "policy", "provenance",
     "segments", "candidates", "comparisons", "facts", "rejected_facts",
@@ -63,53 +62,6 @@ def catalog_digest(catalog: object) -> str:
     if not isinstance(catalog, dict):
         raise CatalogError("O catálogo deve ser um objeto.")
     return _digest({key: value for key, value in catalog.items() if key != "catalog_id"})
-
-
-def decision_digest(catalog: object) -> str:
-    """Hash das decisões v2, independente de razões, citações e metadados de API.
-
-    A ordem física das respostas não muda a identidade das decisões. A escolha
-    do candidato canônico, os requisitos, os agrupamentos e todos os estados de
-    suporte continuam fazendo parte dela. Não certifica correção semântica.
-    """
-    if not isinstance(catalog, dict) or catalog.get("schema_version") != REQUIREMENTS_SCHEMA_VERSION:
-        raise CatalogError("decision_digest exige um catálogo com schema_version 2.")
-    try:
-        candidates = [
-            {"id": item["id"], "segment_id": item["segment_id"], "statement": item["statement"],
-             "information_indices": sorted(item["information_indices"]),
-             "requirements": sorted(item["requirements"], key=lambda requirement: requirement["id"])}
-            for item in catalog["candidates"]
-        ]
-        pairs = [
-            {"candidate_ids": sorted((item["left_id"], item["right_id"])), "relation": item["relation"]}
-            for item in catalog["comparisons"]
-        ]
-        facts = []
-        for category in ("facts", "rejected_facts"):
-            for item in catalog[category]:
-                assessments = [
-                    {"segment_ids": sorted(assessment["segment_ids"]), "status": assessment["status"],
-                     "reference_status": assessment["reference_status"],
-                     "requirements": sorted(
-                         [{"requirement_id": result["requirement_id"], "status": result["status"]}
-                          for result in assessment["requirement_results"]],
-                         key=lambda result: result["requirement_id"])}
-                    for assessment in item["assessments"]
-                ]
-                facts.append({"category": category, "candidate_ids": sorted(item["candidate_ids"]),
-                              "canonical_candidate_id": item["candidate_ids"][0], "statement": item["statement"],
-                              "assessments": sorted(assessments, key=lambda assessment: assessment["segment_ids"])})
-        projection = {
-            "schema_version": REQUIREMENTS_SCHEMA_VERSION,
-            "dataset_fingerprint": catalog["dataset_fingerprint"], "policy": catalog["policy"],
-            "candidates": sorted(candidates, key=lambda item: item["id"]),
-            "comparisons": sorted(pairs, key=lambda item: item["candidate_ids"]),
-            "facts": sorted(facts, key=lambda item: item["candidate_ids"]),
-        }
-    except (KeyError, TypeError, IndexError):
-        raise CatalogError("Estrutura inválida para calcular decision_digest.") from None
-    return _digest(projection)
 
 
 def _object(value: object, fields: set[str], path: str, *, extras: bool = False) -> dict:
@@ -177,14 +129,10 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
     A validação confirma estrutura e proveniência literal, não a correção dos
     julgamentos semânticos. Um catalog_id consistente tampouco é uma assinatura.
     """
-    if not isinstance(catalog, dict) or type(catalog.get("schema_version")) is not int:
-        raise CatalogError("schema_version do catálogo não é suportada.")
-    version = catalog["schema_version"]
-    if version not in (SCHEMA_VERSION, REQUIREMENTS_SCHEMA_VERSION):
-        raise CatalogError("schema_version do catálogo não é suportada.")
-    structured = version == REQUIREMENTS_SCHEMA_VERSION
-    value = _object(catalog, _CATALOG_FIELDS | ({"decision_id"} if structured else set()), "catalog")
+    value = _object(catalog, _CATALOG_FIELDS, "catalog")
     digest = catalog_digest(value)
+    if type(value["schema_version"]) is not int or value["schema_version"] != SCHEMA_VERSION:
+        raise CatalogError("schema_version do catálogo não é suportada.")
     if value["catalog_id"] != digest:
         raise CatalogError("catalog_id não corresponde ao conteúdo do catálogo.")
     fingerprint = value["dataset_fingerprint"]
@@ -236,11 +184,9 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
                 raise CatalogError("O conteúdo ou o histórico do snapshot difere do dataset informado.")
 
     candidates: dict[str, dict] = {}
-    represented_indices: dict[str, set[int]] = {identifier: set() for identifier in segments}
     for index, raw in enumerate(_list(value["candidates"], "candidates")):
         path = f"candidates[{index}]"
-        item = _object(raw, {"id", "segment_id", "statement", "evidence", "information_indices"}
-                       | ({"requirements"} if structured else set()), path)
+        item = _object(raw, {"id", "segment_id", "statement", "evidence", "information_indices"}, path)
         candidate_id = _identifier(item["id"], f"{path}.id")
         segment_id = _identifier(item["segment_id"], f"{path}.segment_id")
         if candidate_id in candidates or segment_id not in segments:
@@ -252,36 +198,7 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
         if (any(type(number) is not int or not 0 <= number < len(segments[segment_id]["information"]) for number in indices)
                 or indices != sorted(set(indices))):
             raise CatalogError(f"{path}.information_indices contém índices inválidos, repetidos ou fora de ordem.")
-        if structured:
-            from .requirements import candidate_identifier, compile_requirements, normalize_statement
-            if not indices:
-                raise CatalogError(f"{path} deve referenciar ao menos uma ocorrência de information.")
-            if normalize_statement(item["statement"]) != item["statement"]:
-                raise CatalogError(f"{path}.statement deve usar normalização canônica de Unicode e espaços.")
-            for occurrence_index in indices:
-                occurrence = segments[segment_id]["information"][occurrence_index]
-                if (not isinstance(occurrence, dict) or "info" not in occurrence
-                        or normalize_statement(occurrence["info"]) != item["statement"]):
-                    raise CatalogError(f"{path}.statement deve preservar a afirmação de information, sem reescrita.")
-            if represented_indices[segment_id].intersection(indices):
-                raise CatalogError(f"{path} repete uma ocorrência de information em candidatos diferentes.")
-            represented_indices[segment_id].update(indices)
-            if candidate_id != candidate_identifier(segment_id, segments[segment_id]["content"], item["statement"]):
-                raise CatalogError(f"{path}.id não corresponde à ocorrência normalizada.")
-            requirements = _list(item["requirements"], f"{path}.requirements")
-            for requirement in requirements:
-                _object(requirement, {"id", "kind", "token_ids", "text"}, f"{path}.requirements")
-            recompiled = compile_requirements(
-                {"requirements": [{"kind": requirement["kind"], "token_ids": requirement["token_ids"]}
-                                  for requirement in requirements]}, item["statement"])
-            if requirements != recompiled:
-                raise CatalogError(f"{path}.requirements não corresponde à compilação canônica dos tokens.")
         candidates[candidate_id] = item
-
-    if structured:
-        for segment_id, segment in segments.items():
-            if represented_indices[segment_id] != set(range(len(segment["information"]))):
-                raise CatalogError("Os candidatos v2 devem cobrir exatamente todas as ocorrências de information.")
 
     comparisons: dict[frozenset[str], dict] = {}
     pair_ids: set[str] = set()
@@ -321,8 +238,6 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
             assigned.update(members)
             if statement not in {candidates[member]["statement"] for member in members}:
                 raise CatalogError(f"{path}.statement deve ser a formulação de um de seus candidatos.")
-            if structured and statement != candidates[members[0]]["statement"]:
-                raise CatalogError(f"{path}.statement deve preservar o primeiro candidato canônico.")
             if any(comparisons[frozenset(pair)]["relation"] != "equivalent" for pair in combinations(members, 2)):
                 raise CatalogError(f"{path} agrupa candidatos sem equivalência confirmada em todos os pares.")
             supports: set[tuple[str, ...]] = set()
@@ -330,8 +245,7 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
             has_possible_support = False
             for position, raw_assessment in enumerate(_list(fact["assessments"], f"{path}.assessments")):
                 assessment_path = f"{path}.assessments[{position}]"
-                assessment = _object(raw_assessment, {"segment_ids", "status", "evidence", "reason"}
-                                     | ({"reference_status", "requirement_results"} if structured else set()), assessment_path)
+                assessment = _object(raw_assessment, {"segment_ids", "status", "evidence", "reason"}, assessment_path)
                 ids = _ids(assessment["segment_ids"], f"{assessment_path}.segment_ids", known_segments, nonempty=True, ordered=True)
                 support_key = tuple(ids)
                 if support_key in supports:
@@ -346,39 +260,6 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
                 evidenced = _evidence(assessment["evidence"], segments, set(ids), f"{assessment_path}.evidence")
                 if status == "supported" and evidenced != set(ids):
                     raise CatalogError(f"{assessment_path} exige evidência para todos os segmentos que sustentam a informação.")
-                if structured:
-                    from .requirements import REQUIREMENT_STATUSES, reduce_requirement_status
-                    if len(ids) != 1:
-                        raise CatalogError(f"{assessment_path}: o contrato v2 avalia segmentos independentes.")
-                    requirements = candidates[members[0]]["requirements"]
-                    known_requirements = {requirement["id"] for requirement in requirements}
-                    results = _list(assessment["requirement_results"], f"{assessment_path}.requirement_results")
-                    seen_requirements = set()
-                    merged_evidence = {}
-                    states = []
-                    for result in results:
-                        _object(result, {"requirement_id", "status", "evidence"}, f"{assessment_path}.requirement_results")
-                        requirement_id = _identifier(result["requirement_id"], f"{assessment_path}.requirement_id")
-                        if requirement_id not in known_requirements or requirement_id in seen_requirements:
-                            raise CatalogError(f"{assessment_path} contém requisito desconhecido ou repetido.")
-                        seen_requirements.add(requirement_id)
-                        requirement_status = result["status"]
-                        if not isinstance(requirement_status, str) or requirement_status not in REQUIREMENT_STATUSES:
-                            raise CatalogError(f"{assessment_path} contém estado de requisito inválido.")
-                        states.append(requirement_status)
-                        proved = _evidence(result["evidence"], segments, set(ids), f"{assessment_path}.requirement_evidence")
-                        if (requirement_status == "absent" and result["evidence"]
-                                or requirement_status != "absent" and proved != set(ids)):
-                            raise CatalogError(f"{assessment_path}: requisito ausente exige []; demais estados exigem evidência literal.")
-                        for quote in result["evidence"]:
-                            merged_evidence[quote["segment_id"], quote["start"], quote["end"]] = quote
-                    if seen_requirements != known_requirements:
-                        raise CatalogError(f"{assessment_path} deve avaliar todos os requisitos do candidato canônico.")
-                    if status != reduce_requirement_status(assessment["reference_status"], states):
-                        raise CatalogError(f"{assessment_path}.status difere da redução determinística dos requisitos.")
-                    expected_evidence = [merged_evidence[key] for key in sorted(merged_evidence)]
-                    if assessment["evidence"] != expected_evidence:
-                        raise CatalogError(f"{assessment_path}.evidence deve ser a união canônica das evidências dos requisitos.")
                 has_possible_support |= status in ("supported", "uncertain")
             if singletons != known_segments:
                 raise CatalogError(f"{path} deve avaliar explicitamente cada segmento do snapshot.")
@@ -386,6 +267,4 @@ def validate_catalog(catalog: object, dataset: object = None) -> dict[str, Any]:
                 raise CatalogError(f"{path} está na lista incorreta de informações aceitas ou rejeitadas.")
     if assigned != set(candidates):
         raise CatalogError("facts e rejected_facts devem particionar exatamente todos os candidatos.")
-    if structured and value["decision_id"] != decision_digest(value):
-        raise CatalogError("decision_id não corresponde às decisões do catálogo.")
     return value

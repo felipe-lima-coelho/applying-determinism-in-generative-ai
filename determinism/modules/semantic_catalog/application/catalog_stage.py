@@ -6,7 +6,6 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import ClassVar
 
 from ..domain import CatalogError, catalog_digest, dataset_digest, validate_catalog
 from ..ports.cache import ResponseCache
@@ -154,7 +153,6 @@ def _partition(candidates, comparisons):
 
 @dataclass(frozen=True)
 class CatalogStage:
-    application_revision: ClassVar[str] = "catalog-v1"
     provider: CatalogProvider
     max_concurrency: int = 4
     comparison_batch_size: int = 24
@@ -178,7 +176,7 @@ class CatalogStage:
 
     def _invoke(self, operation, arguments, validate):
         request = {"operation": operation, "arguments": arguments, "provenance": self.provenance,
-                   "application_revision": self.application_revision}
+                   "application_revision": "catalog-v1"}
         key = hashlib.sha256(json.dumps(request, ensure_ascii=True, sort_keys=True, allow_nan=False,
                                         separators=(",", ":")).encode()).hexdigest()
         response = self.cache.get(key) if self.cache is not None else None

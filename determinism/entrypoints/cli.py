@@ -4,7 +4,7 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..experiments import run_catalog, run_catalog_comparison, run_extraction, run_grouping, run_mapping, run_simulation
+from ..experiments import run_catalog, run_extraction, run_grouping, run_mapping, run_simulation
 from ..modules.semantic_catalog.adapters import load_catalog_config
 from ..modules.semantic_catalog.domain import CatalogError
 from ..modules.semantic_extraction.adapters import ConfigurationError, load_extraction_config
@@ -36,7 +36,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     grouping.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_grouping.toml.")
     grouping.add_argument("--env-file", type=Path, default=Path(".env"), help="Credenciais de embeddings/PostgreSQL; ambiente tem precedência.")
     catalog = commands.add_parser("catalog", help="Constrói catálogo global com evidências e suporte por segmento.")
-    catalog.add_argument("input", type=Path, help="Dataset JSON com information; o método padrão preserva as unidades extraídas e verifica seus requisitos.")
+    catalog.add_argument("input", type=Path, help="Dataset JSON; information e grupos existentes são usados como pistas.")
     catalog.add_argument("--output", type=Path, required=True, help="Catálogo JSON separado; nunca substitui o dataset.")
     catalog.add_argument("--config", type=Path, help="Configuração TOML de semantic_catalog.")
     catalog.add_argument("--env-file", type=Path, default=Path(".env"), help="Credencial do avaliador; ambiente tem precedência.")
@@ -49,11 +49,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     simulation.add_argument("--remove", action="append", default=[], metavar="SEGMENT_ID", help="ID do catálogo, por exemplo s0.seg0; repetível.")
     simulation.add_argument("--remove-source", action="append", default=[], metavar="SOURCE_ID", help="Remove todos os segmentos de uma fonte, por exemplo s0; repetível.")
     simulation.add_argument("--dataset", type=Path, help="Verifica se o catálogo ainda corresponde exatamente a este dataset.")
-    comparison = commands.add_parser("compare-catalogs", help="Compara decisões de dois catálogos v2, sem chamadas ao modelo.")
-    comparison.add_argument("first", type=Path, help="Catálogo de referência.")
-    comparison.add_argument("second", type=Path, help="Catálogo da nova execução, sobre o mesmo dataset.")
-    comparison.add_argument("--output", type=Path, required=True, help="Diagnóstico JSON separado dos catálogos.")
-    comparison.add_argument("--fail-on-difference", action="store_true", help="Retorna código 2 se houver mudança nas decisões; diferenças somente de auditoria não falham.")
     arguments = parser.parse_args(argv)
 
     try:
@@ -76,16 +71,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             for segment in result["segments"]:
                 print(f"  {segment['id']} | {segment['source_name']} | segmento {segment['segment_index']}")
             return 0
-        elif arguments.command == "compare-catalogs":
-            report = run_catalog_comparison(arguments.first, arguments.second, arguments.output)
-            print(f"Comparação salva em {arguments.output}")
-            if report["same_decisions"]:
-                print("Decisões iguais; " + ("artefatos idênticos." if report["same_file_bytes"] else "há diferenças de auditoria ou formatação."))
-            else:
-                print("Instabilidade entre inferências: as decisões diferem. Isso não equivale à categoria de suporte incerto do texto.")
-                for key, value in report["summary"].items():
-                    print(f"  {key}: {value}")
-            return 2 if arguments.fail_on_difference and not report["same_decisions"] else 0
         else:
             report = run_simulation(arguments.input, arguments.output, removed_segment_ids=arguments.remove,
                                     removed_source_ids=arguments.remove_source, dataset_path=arguments.dataset)
@@ -94,11 +79,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"{label}: {len(report[key])}")
                 for item in report[key]:
                     print(f"  {item['fact_id']}: {item['statement']}")
-                    if key == "lost_information" and "requirement_coverage" in item:
-                        print("    Componentes da afirmação (não somados como novas informações):")
-                        for component in item["requirement_coverage"]:
-                            component_label = {"lost": "Perdido", "preserved": "Preservado", "uncertain": "Incerto"}[component["classification"]]
-                            print(f"      {component_label}: {component['text']}")
             return 0
     except (DatasetFormatError, DatasetFileError, ExtractionError, ConfigurationError, GroupingError, CatalogError, OSError) as error:
         parser.exit(status=1, message=f"Erro: {error}\n")
