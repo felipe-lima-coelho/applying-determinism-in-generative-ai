@@ -143,8 +143,7 @@ def validate_information(payload: object, segment: SegmentInput) -> list[Informa
         item_path = f"{path}[{index}]"
         if isinstance(item, dict) and set(item) == {"info", "tokens", "context"}:
             raise ResponseValidationError(
-                f"{item_path}.syntagm é obrigatório; o formato anterior exige reextração explícita "
-                "a partir do trecho e mapa preservados. Nenhuma tripla é inferida nem histórico descartado automaticamente."
+                f"{item_path}.syntagm é obrigatório em cada informação retornada pelo provedor."
             )
         if not isinstance(item, dict) or set(item) != {"info", "tokens", "context", "syntagm"}:
             raise ResponseValidationError(f"{item_path} deve conter somente info, tokens, context e syntagm.")

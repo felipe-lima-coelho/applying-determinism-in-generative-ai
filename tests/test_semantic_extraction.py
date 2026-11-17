@@ -185,15 +185,16 @@ class ExtractionDomainTests(unittest.TestCase):
 
 
 class ExtractionApplicationTests(unittest.TestCase):
-    def test_feedback_follows_validated_history_and_changes_focus_after_each_response(self):
+    def test_feedback_starts_at_zero_and_tracks_only_current_responses(self):
         dataset = mapped_dataset()
         dataset[0]["segments"][0]["information"] = information()["informacoes"]
         original = copy.deepcopy(dataset)
-        provider = SequenceProvider([information(tokens=[0, 1, 2]), information(tokens=[0, 2])])
+        provider = SequenceProvider([information(tokens=[0, 1]), information(tokens=[0, 1, 2]), information(tokens=[0, 2])])
         extracted = extract_dataset(dataset, provider=provider)
         self.assertEqual([call.coverage for call in provider.calls], [
-            CoverageFeedback(1, ((0, 1), (1, 1), (2, 0))),
-            CoverageFeedback(2, ((2, 1),)),
+            CoverageFeedback(1, ((0, 0), (1, 0), (2, 0))),
+            CoverageFeedback(2, ((0, 1), (1, 1), (2, 0))),
+            CoverageFeedback(3, ((2, 1),)),
         ])
         self.assertEqual([entry["count"] for entry in extracted[0]["segments"][0]["map"].values()], [3, 2, 2])
         self.assertEqual(dataset, original)
@@ -224,15 +225,16 @@ class ExtractionApplicationTests(unittest.TestCase):
         data = map_dataset([{"segments": [{"content": content}]}])
         segment = data[0]["segments"][0]
         self.assertEqual((segment["map"]["17"]["word"], segment["map"]["23"]["word"]), ("Foi", "que"))
-        segment["information"] = (
+        initial = {"informacoes": (
             information(tokens=[token for token in range(33) if token not in (17, 23)])["informacoes"]
             + information(tokens=[token for token in range(33) if token != 17])["informacoes"]
-        )
+        )}
         payload = information("O bebê real foi apresentado ao mundo no colo do pai, sorridente.", list(range(17, 33)))
-        provider = SequenceProvider([payload, payload])
-        result = extract_dataset(data, provider=provider, max_generations_per_segment=2)
+        provider = SequenceProvider([initial, payload, payload])
+        result = extract_dataset(data, provider=provider, max_generations_per_segment=3)
         self.assertEqual([call.coverage for call in provider.calls], [
-            CoverageFeedback(1, ((17, 0), (23, 1))), CoverageFeedback(2, ((17, 1),)),
+            CoverageFeedback(1, tuple((token, 0) for token in range(33))),
+            CoverageFeedback(2, ((17, 0), (23, 1))), CoverageFeedback(3, ((17, 1),)),
         ])
         self.assertEqual((result[0]["segments"][0]["map"]["17"]["count"], result[0]["segments"][0]["map"]["23"]["count"]), (2, 3))
 
@@ -334,28 +336,29 @@ class ExtractionApplicationTests(unittest.TestCase):
         self.assertEqual(segment["information"][0]["tokens"], [0, 1, 2])
         self.assertEqual(segment["information"][1]["tokens"], [0, 1, 2])
 
-    def test_resumes_from_all_prior_items_recomputes_stale_counts_and_appends_in_order(self):
+    def test_each_run_replaces_covered_information_counts_and_invalidates_groups(self):
         dataset = mapped_dataset()
         prior = information("Informação anterior.")["informacoes"]
-        dataset[0]["segments"][0]["information"] = copy.deepcopy(prior)
+        dataset[0]["segments"][0]["information"] = copy.deepcopy(prior * 2)
+        dataset[0]["segments"][0]["set_different_information"] = [[{"info": "Agrupamento anterior."}]]
         original = copy.deepcopy(dataset)
-        new = [information("Primeira geração.", [0, 1, 2]), information("Segunda geração.", [0, 2])]
+        new = [information("Primeira geração.", [0, 1, 2]), information("Segunda geração.", [0, 1, 2])]
         provider = SequenceProvider(new)
         first = extract_dataset(dataset, provider=provider, max_generations_per_segment=2)
         segment = first[0]["segments"][0]
         self.assertEqual(len(provider.calls), 2)
-        self.assertEqual(segment["information"], prior + new[0]["informacoes"] + new[1]["informacoes"])
-        self.assertEqual([entry["count"] for entry in segment["map"].values()], [3, 2, 2])
+        self.assertEqual(segment["information"], new[0]["informacoes"] + new[1]["informacoes"])
+        self.assertEqual([entry["count"] for entry in segment["map"].values()], [2, 2, 2])
+        self.assertNotIn("set_different_information", segment)
         self.assertEqual(dataset, original)
-        for entry in segment["map"].values():
-            entry["count"] = 0
-        already_covered_provider = FakeProvider({"informacoes": []})
+        already_covered_provider = FakeProvider(information("Nova execução.", [0, 1, 2]))
         second = extract_dataset(first, provider=already_covered_provider)
-        self.assertEqual(already_covered_provider.calls, [])
-        self.assertEqual(second[0]["segments"][0]["information"], segment["information"])
-        self.assertEqual([entry["count"] for entry in second[0]["segments"][0]["map"].values()], [3, 2, 2])
+        self.assertEqual(len(already_covered_provider.calls), 2)
+        self.assertEqual(already_covered_provider.calls[0].coverage, CoverageFeedback(1, ((0, 0), (1, 0), (2, 0))))
+        self.assertEqual(second[0]["segments"][0]["information"], already_covered_provider.payload["informacoes"] * 2)
+        self.assertEqual([entry["count"] for entry in second[0]["segments"][0]["map"].values()], [2, 2, 2])
         new[0]["informacoes"][0]["tokens"].clear()
-        self.assertEqual(segment["information"][1]["tokens"], [0, 1, 2])
+        self.assertEqual(segment["information"][0]["tokens"], [0, 1, 2])
 
     def test_multiple_generations_preserve_identical_items_and_stop_at_exact_limit(self):
         provider = FakeProvider()
@@ -367,6 +370,8 @@ class ExtractionApplicationTests(unittest.TestCase):
         for payload in (information(), {"informacoes": []}):
             with self.subTest(payload=payload):
                 data = mapped_dataset()
+                data[0]["segments"][0]["information"] = information("Extração anterior.", [0, 1, 2])["informacoes"] * 2
+                data[0]["segments"][0]["set_different_information"] = [[{"info": "Grupo anterior."}]]
                 original = copy.deepcopy(data)
                 provider = FakeProvider(payload)
                 with self.assertRaises(IncompleteCoverageError) as context:
@@ -379,6 +384,7 @@ class ExtractionApplicationTests(unittest.TestCase):
                 partial = context.exception.partial_dataset
                 self.assertEqual(partial[0]["segments"][0]["information"], payload["informacoes"] * 3)
                 self.assertEqual(partial[0]["segments"][0]["map"]["2"]["count"], 0)
+                self.assertNotIn("set_different_information", partial[0]["segments"][0])
 
     def test_cap_drains_all_submitted_jobs_and_reports_unscheduled_segments(self):
         data = mapped_dataset(3)
@@ -424,7 +430,7 @@ class ExtractionApplicationTests(unittest.TestCase):
         self.assertNotIn("segments[1]", str(context.exception))
         self.assertEqual(data, original)
 
-    def test_all_prior_information_is_validated_before_any_call(self):
+    def test_invalid_prior_information_is_ignored_and_replaced(self):
         invalid_items = [None, {}, "not-a-list", [{"old": "invalid"}]]
         invalid_items.extend(information(tokens=tokens)["informacoes"] for tokens in ([0, 0], [0, 99], [False, 1], [1, 0]))
         for items in invalid_items:
@@ -433,9 +439,9 @@ class ExtractionApplicationTests(unittest.TestCase):
                 data[0]["segments"][1]["information"] = items
                 original = copy.deepcopy(data)
                 provider = FakeProvider()
-                with self.assertRaisesRegex(ResponseValidationError, r"\$\[0\].segments\[1\].information"):
-                    extract_dataset(data, provider=provider)
-                self.assertEqual(provider.calls, [])
+                result = extract_dataset(data, provider=provider)
+                self.assertEqual(len(provider.calls), 4)
+                self.assertEqual(result[0]["segments"][1]["information"], provider.payload["informacoes"] * 2)
                 self.assertEqual(data, original)
 
     def test_malformed_later_generation_preserves_caller_and_does_not_continue(self):
@@ -452,7 +458,7 @@ class ExtractionApplicationTests(unittest.TestCase):
         for dataset in ([], [{"segments": []}]):
             self.assertEqual(extract_dataset(dataset, provider=provider), dataset)
         self.assertEqual(provider.calls, [])
-        data = [{"segments": [{"content": "", "map": {}}, {"content": "!", "map": {}}]}]
+        data = [{"segments": [{"content": "", "map": {}, "information": [{"old": "invalid"}]}, {"content": "!", "map": {}}]}]
         result = extract_dataset(data, provider=provider)
         self.assertEqual([segment["information"] for segment in result[0]["segments"]], [[], []])
         self.assertEqual(provider.calls, [])
@@ -722,7 +728,7 @@ def local_server(payload=None):
 
 
 class ExtractionPersistenceTests(unittest.TestCase):
-    def test_legacy_history_fails_before_calls_and_preserves_input_and_output(self):
+    def test_legacy_history_is_replaced_in_place_or_in_separate_output(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "legacy.json"
             data = mapped_dataset(2)
@@ -733,17 +739,21 @@ class ExtractionPersistenceTests(unittest.TestCase):
             original = path.read_bytes()
             output = Path(directory) / "existing.json"
             output.write_bytes(b"previous-result")
-            provider = FakeProvider()
             for destination in (None, output):
-                with self.subTest(destination=destination), self.assertRaisesRegex(
-                    ResponseValidationError, r"segments\[1\].information\[0\].syntagm.*formato anterior.*reextração explícita",
-                ):
-                    run_extraction(path, destination, provider=provider)
-                self.assertEqual(provider.calls, [])
-                self.assertEqual(path.read_bytes(), original)
-                self.assertEqual(output.read_bytes(), b"previous-result")
+                with self.subTest(destination=destination):
+                    path.write_bytes(original)
+                    provider = FakeProvider()
+                    result = run_extraction(path, destination, provider=provider)
+                    self.assertEqual(len(provider.calls), 4)
+                    saved = path if destination is None else output
+                    self.assertEqual(json.loads(saved.read_text(encoding="utf-8")), result)
+                    self.assertEqual(result[0]["segments"][1]["information"], provider.payload["informacoes"] * 2)
+                    if destination is not None:
+                        self.assertEqual(path.read_bytes(), original)
+                    else:
+                        self.assertEqual(output.read_bytes(), b"previous-result")
 
-    def test_empty_object_survives_save_reload_and_resume_without_aliasing_provider(self):
+    def test_empty_object_survives_save_reload_and_reextraction_without_aliasing_provider(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "mapped.json"
             data = map_dataset([{"segments": [{"content": "Ana dormiu."}]}])
@@ -756,9 +766,9 @@ class ExtractionPersistenceTests(unittest.TestCase):
             self.assertEqual(extracted[0]["segments"][0]["information"], payload["informacoes"] * 2)
             payload["informacoes"][0]["syntagm"]["relation"] = "acordou"
             self.assertEqual(extracted, expected)
-            covered_provider = FakeProvider()
+            covered_provider = FakeProvider(information("Ana dormiu.", syntagm={"subject": "Ana", "relation": "dormiu", "object": ""}))
             self.assertEqual(run_extraction(path, provider=covered_provider), expected)
-            self.assertEqual(covered_provider.calls, [])
+            self.assertEqual(len(covered_provider.calls), 2)
 
     def test_in_place_save_and_separate_output(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -772,14 +782,20 @@ class ExtractionPersistenceTests(unittest.TestCase):
             second = run_extraction(path, provider=FakeProvider())
             self.assertEqual(json.loads(path.read_text(encoding="utf-8")), second)
             self.assertEqual(second[0]["segments"][0]["information"], information(tokens=[0, 1, 2])["informacoes"] * 2)
-            covered_provider = FakeProvider({"informacoes": []})
-            self.assertEqual(run_extraction(path, provider=covered_provider), second)
-            self.assertEqual(covered_provider.calls, [])
+            covered_provider = FakeProvider(information("Nova extração.", [0, 1, 2]))
+            third = run_extraction(path, provider=covered_provider)
+            self.assertEqual(len(covered_provider.calls), 2)
+            self.assertEqual(third[0]["segments"][0]["information"], covered_provider.payload["informacoes"] * 2)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), third)
 
     def test_provider_response_or_atomic_write_failure_preserves_existing_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "mapped.json"
-            path.write_text(json.dumps(mapped_dataset(2)), encoding="utf-8")
+            data = mapped_dataset(2)
+            for segment in data[0]["segments"]:
+                segment["information"] = information("Resultado anterior.", [0, 1, 2])["informacoes"] * 2
+                segment["set_different_information"] = [[{"info": "Grupo anterior."}]]
+            path.write_text(json.dumps(data), encoding="utf-8")
             original = path.read_bytes()
             output = Path(directory) / "extracted.json"
             output.write_bytes(b"previous-result")
@@ -795,7 +811,7 @@ class ExtractionPersistenceTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), original)
             self.assertEqual(list(Path(directory).glob(".*.tmp")), [])
 
-    def test_incomplete_coverage_saves_valid_progress_to_selected_destination_and_resumes(self):
+    def test_incomplete_coverage_saves_current_run_and_next_run_replaces_it(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "mapped.json"
             path.write_text(json.dumps(mapped_dataset(2)), encoding="utf-8")
@@ -825,14 +841,15 @@ class ExtractionPersistenceTests(unittest.TestCase):
                         self.assertEqual(path.read_bytes(), original)
                     else:
                         self.assertEqual(output.read_bytes(), b"previous-result")
-                    resuming_provider = FakeProvider(information(tokens=[1, 2]))
-                    resumed = run_extraction(saved, config=config, provider=resuming_provider)
-                    self.assertEqual(len(resuming_provider.calls), 1)
-                    self.assertEqual(resuming_provider.calls[0].segment_index, 1)
-                    self.assertEqual(resuming_provider.calls[0].coverage, CoverageFeedback(1, ((2, 1),)))
-                    self.assertEqual(resumed[0]["segments"][0]["information"], partial[0]["segments"][0]["information"])
-                    self.assertEqual(resumed[0]["segments"][1]["information"], partial[0]["segments"][1]["information"] + information(tokens=[1, 2])["informacoes"])
-                    self.assertEqual([entry["count"] for entry in resumed[0]["segments"][1]["map"].values()], [2, 3, 2])
+                    self.assertIn("reinicia a extração", str(context.exception))
+                    fresh_provider = FakeProvider(information("Nova extração.", [0, 1, 2]))
+                    fresh = run_extraction(saved, config=config, provider=fresh_provider)
+                    self.assertEqual(len(fresh_provider.calls), 4)
+                    self.assertEqual(fresh_provider.calls[0].segment_index, 0)
+                    self.assertEqual(fresh_provider.calls[0].coverage, CoverageFeedback(1, ((0, 0), (1, 0), (2, 0))))
+                    for segment in fresh[0]["segments"]:
+                        self.assertEqual(segment["information"], fresh_provider.payload["informacoes"] * 2)
+                        self.assertEqual([entry["count"] for entry in segment["map"].values()], [2, 2, 2])
 
     def test_partial_save_atomic_failure_preserves_existing_files(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -940,7 +957,18 @@ class ExtractionPersistenceTests(unittest.TestCase):
             self.assertTrue(all(request[1]["messages"][0]["content"].startswith(system_prompt() + "\n\n") for request in requests))
             self.assertEqual(requests[0][1]["messages"][-1], requests[1][1]["messages"][-1])
 
-    def test_cli_rejects_legacy_history_without_http_or_writes(self):
+            # A segunda execução lê um resultado já coberto e ainda chama o modelo.
+            regenerated = subprocess.run(
+                [sys.executable, "-m", "determinism", "extract", str(output), "--config", str(config), "--env-file", str(directory / "absent.env")],
+                cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False,
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+            )
+            self.assertEqual(regenerated.returncode, 0, regenerated.stderr)
+            self.assertEqual(len(requests), 4)
+            self.assertEqual(coverage_state(requests[2][1]), coverage_state(requests[0][1]))
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8"))[0]["segments"][0], segment)
+
+    def test_cli_replaces_legacy_history_with_new_triples(self):
         with tempfile.TemporaryDirectory() as directory, local_server() as (base_url, requests):
             directory = Path(directory)
             path = directory / "legacy.json"
@@ -959,13 +987,14 @@ class ExtractionPersistenceTests(unittest.TestCase):
                 cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False,
                 env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
-            self.assertEqual(completed.returncode, 1)
-            self.assertEqual(completed.stdout, "")
-            self.assertIn("syntagm é obrigatório", completed.stderr)
-            self.assertIn("formato anterior exige reextração explícita", completed.stderr)
-            self.assertEqual(requests, [])
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn("Extração salva em", completed.stdout)
+            self.assertEqual(completed.stderr, "")
+            self.assertEqual(len(requests), 4)
             self.assertEqual(path.read_bytes(), original)
-            self.assertEqual(output.read_bytes(), b"previous-result")
+            result = json.loads(output.read_text(encoding="utf-8"))
+            for segment in result[0]["segments"]:
+                self.assertEqual(segment["information"], information(tokens=[0, 1, 2])["informacoes"] * 2)
 
     def test_cli_reports_incomplete_coverage_and_saved_partial_at_configured_limit(self):
         with tempfile.TemporaryDirectory() as directory, local_server(information()) as (base_url, requests):
