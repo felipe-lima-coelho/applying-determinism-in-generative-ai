@@ -3,10 +3,1045 @@
         "name": "jornal_da_band",
         "segments": [
             {
-                "content": "Príncipe Harry e a Duquesa Meghan Markle apareceram em público pela primeira vez com o filho, que nasceu há dois dias."
+                "content": "Príncipe Harry e a Duquesa Meghan Markle apareceram em público pela primeira vez com o filho, que nasceu há dois dias.",
+                "map": {
+                    "0": {
+                        "token": 0,
+                        "word": "Príncipe",
+                        "count": 6
+                    },
+                    "1": {
+                        "token": 1,
+                        "word": "Harry",
+                        "count": 6
+                    },
+                    "2": {
+                        "token": 2,
+                        "word": "e",
+                        "count": 6
+                    },
+                    "3": {
+                        "token": 3,
+                        "word": "a",
+                        "count": 6
+                    },
+                    "4": {
+                        "token": 4,
+                        "word": "Duquesa",
+                        "count": 6
+                    },
+                    "5": {
+                        "token": 5,
+                        "word": "Meghan",
+                        "count": 6
+                    },
+                    "6": {
+                        "token": 6,
+                        "word": "Markle",
+                        "count": 6
+                    },
+                    "7": {
+                        "token": 7,
+                        "word": "apareceram",
+                        "count": 4
+                    },
+                    "8": {
+                        "token": 8,
+                        "word": "em",
+                        "count": 4
+                    },
+                    "9": {
+                        "token": 9,
+                        "word": "público",
+                        "count": 4
+                    },
+                    "10": {
+                        "token": 10,
+                        "word": "pela",
+                        "count": 2
+                    },
+                    "11": {
+                        "token": 11,
+                        "word": "primeira",
+                        "count": 2
+                    },
+                    "12": {
+                        "token": 12,
+                        "word": "vez",
+                        "count": 2
+                    },
+                    "13": {
+                        "token": 13,
+                        "word": "com",
+                        "count": 5
+                    },
+                    "14": {
+                        "token": 14,
+                        "word": "o",
+                        "count": 6
+                    },
+                    "15": {
+                        "token": 15,
+                        "word": "filho",
+                        "count": 6
+                    },
+                    "16": {
+                        "token": 16,
+                        "word": "que",
+                        "count": 2
+                    },
+                    "17": {
+                        "token": 17,
+                        "word": "nasceu",
+                        "count": 2
+                    },
+                    "18": {
+                        "token": 18,
+                        "word": "há",
+                        "count": 2
+                    },
+                    "19": {
+                        "token": 19,
+                        "word": "dois",
+                        "count": 2
+                    },
+                    "20": {
+                        "token": 20,
+                        "word": "dias",
+                        "count": 2
+                    }
+                },
+                "information": [
+                    {
+                        "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Ação e companhia: quem apareceu em público e com quem."
+                    },
+                    {
+                        "info": "A aparição do Príncipe Harry e da Duquesa Meghan Markle em público com o filho ocorreu pela primeira vez.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Circunstância de ocorrência: se essa aparição já havia ocorrido antes."
+                    },
+                    {
+                        "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20
+                        ],
+                        "context": "Nascimento e referência temporal: quando nasceu o filho."
+                    },
+                    {
+                        "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Ação e circunstância: quem apareceu em público e com quem."
+                    },
+                    {
+                        "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho pela primeira vez.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15
+                        ],
+                        "context": "Circunstância temporal da aparição: quando foi a primeira aparição pública com o filho."
+                    },
+                    {
+                        "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20
+                        ],
+                        "context": "Acontecimento e tempo: quando nasceu o filho."
+                    }
+                ],
+                "set_different_information": [
+                    [
+                        {
+                            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                            "context": "Ação e companhia: quem apareceu em público e com quem.",
+                            "avg_similarity": 0.9458310240137622
+                        },
+                        {
+                            "info": "A aparição do Príncipe Harry e da Duquesa Meghan Markle em público com o filho ocorreu pela primeira vez.",
+                            "context": "Circunstância de ocorrência: se essa aparição já havia ocorrido antes.",
+                            "avg_similarity": 0.9119405109689213
+                        },
+                        {
+                            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho.",
+                            "context": "Ação e circunstância: quem apareceu em público e com quem.",
+                            "avg_similarity": 0.9458310240137622
+                        },
+                        {
+                            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho pela primeira vez.",
+                            "context": "Circunstância temporal da aparição: quando foi a primeira aparição pública com o filho.",
+                            "avg_similarity": 0.9487945886510466
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                            "context": "Nascimento e referência temporal: quando nasceu o filho.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+                            "context": "Acontecimento e tempo: quando nasceu o filho.",
+                            "avg_similarity": 1.0
+                        }
+                    ]
+                ]
             },
             {
-                "content": "O bebê real recebeu o nome de Archie Harrison. Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo, com temperamento doce. O príncipe brincou e disse que não sabe a quem ele puxou. Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor."
+                "content": "O bebê real recebeu o nome de Archie Harrison. Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo, com temperamento doce. O príncipe brincou e disse que não sabe a quem ele puxou. Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+                "map": {
+                    "0": {
+                        "token": 0,
+                        "word": "O",
+                        "count": 3
+                    },
+                    "1": {
+                        "token": 1,
+                        "word": "bebê",
+                        "count": 3
+                    },
+                    "2": {
+                        "token": 2,
+                        "word": "real",
+                        "count": 3
+                    },
+                    "3": {
+                        "token": 3,
+                        "word": "recebeu",
+                        "count": 3
+                    },
+                    "4": {
+                        "token": 4,
+                        "word": "o",
+                        "count": 3
+                    },
+                    "5": {
+                        "token": 5,
+                        "word": "nome",
+                        "count": 3
+                    },
+                    "6": {
+                        "token": 6,
+                        "word": "de",
+                        "count": 3
+                    },
+                    "7": {
+                        "token": 7,
+                        "word": "Archie",
+                        "count": 3
+                    },
+                    "8": {
+                        "token": 8,
+                        "word": "Harrison",
+                        "count": 3
+                    },
+                    "9": {
+                        "token": 9,
+                        "word": "Na",
+                        "count": 6
+                    },
+                    "10": {
+                        "token": 10,
+                        "word": "rápida",
+                        "count": 4
+                    },
+                    "11": {
+                        "token": 11,
+                        "word": "aparição",
+                        "count": 6
+                    },
+                    "12": {
+                        "token": 12,
+                        "word": "no",
+                        "count": 5
+                    },
+                    "13": {
+                        "token": 13,
+                        "word": "Castelo",
+                        "count": 5
+                    },
+                    "14": {
+                        "token": 14,
+                        "word": "de",
+                        "count": 5
+                    },
+                    "15": {
+                        "token": 15,
+                        "word": "Windsor",
+                        "count": 5
+                    },
+                    "16": {
+                        "token": 16,
+                        "word": "a",
+                        "count": 6
+                    },
+                    "17": {
+                        "token": 17,
+                        "word": "Duquesa",
+                        "count": 6
+                    },
+                    "18": {
+                        "token": 18,
+                        "word": "de",
+                        "count": 6
+                    },
+                    "19": {
+                        "token": 19,
+                        "word": "Sussex",
+                        "count": 6
+                    },
+                    "20": {
+                        "token": 20,
+                        "word": "disse",
+                        "count": 3
+                    },
+                    "21": {
+                        "token": 21,
+                        "word": "que",
+                        "count": 3
+                    },
+                    "22": {
+                        "token": 22,
+                        "word": "o",
+                        "count": 3
+                    },
+                    "23": {
+                        "token": 23,
+                        "word": "bebê",
+                        "count": 3
+                    },
+                    "24": {
+                        "token": 24,
+                        "word": "é",
+                        "count": 3
+                    },
+                    "25": {
+                        "token": 25,
+                        "word": "muito",
+                        "count": 3
+                    },
+                    "26": {
+                        "token": 26,
+                        "word": "calmo",
+                        "count": 3
+                    },
+                    "27": {
+                        "token": 27,
+                        "word": "com",
+                        "count": 3
+                    },
+                    "28": {
+                        "token": 28,
+                        "word": "temperamento",
+                        "count": 3
+                    },
+                    "29": {
+                        "token": 29,
+                        "word": "doce",
+                        "count": 3
+                    },
+                    "30": {
+                        "token": 30,
+                        "word": "O",
+                        "count": 8
+                    },
+                    "31": {
+                        "token": 31,
+                        "word": "príncipe",
+                        "count": 8
+                    },
+                    "32": {
+                        "token": 32,
+                        "word": "brincou",
+                        "count": 5
+                    },
+                    "33": {
+                        "token": 33,
+                        "word": "e",
+                        "count": 4
+                    },
+                    "34": {
+                        "token": 34,
+                        "word": "disse",
+                        "count": 5
+                    },
+                    "35": {
+                        "token": 35,
+                        "word": "que",
+                        "count": 5
+                    },
+                    "36": {
+                        "token": 36,
+                        "word": "não",
+                        "count": 5
+                    },
+                    "37": {
+                        "token": 37,
+                        "word": "sabe",
+                        "count": 5
+                    },
+                    "38": {
+                        "token": 38,
+                        "word": "a",
+                        "count": 5
+                    },
+                    "39": {
+                        "token": 39,
+                        "word": "quem",
+                        "count": 5
+                    },
+                    "40": {
+                        "token": 40,
+                        "word": "ele",
+                        "count": 5
+                    },
+                    "41": {
+                        "token": 41,
+                        "word": "puxou",
+                        "count": 5
+                    },
+                    "42": {
+                        "token": 42,
+                        "word": "Horas",
+                        "count": 4
+                    },
+                    "43": {
+                        "token": 43,
+                        "word": "depois",
+                        "count": 4
+                    },
+                    "44": {
+                        "token": 44,
+                        "word": "o",
+                        "count": 3
+                    },
+                    "45": {
+                        "token": 45,
+                        "word": "casal",
+                        "count": 4
+                    },
+                    "46": {
+                        "token": 46,
+                        "word": "divulgou",
+                        "count": 4
+                    },
+                    "47": {
+                        "token": 47,
+                        "word": "o",
+                        "count": 3
+                    },
+                    "48": {
+                        "token": 48,
+                        "word": "nome",
+                        "count": 4
+                    },
+                    "49": {
+                        "token": 49,
+                        "word": "do",
+                        "count": 4
+                    },
+                    "50": {
+                        "token": 50,
+                        "word": "bebê",
+                        "count": 4
+                    },
+                    "51": {
+                        "token": 51,
+                        "word": "real",
+                        "count": 4
+                    },
+                    "52": {
+                        "token": 52,
+                        "word": "Archie",
+                        "count": 4
+                    },
+                    "53": {
+                        "token": 53,
+                        "word": "Harrison",
+                        "count": 4
+                    },
+                    "54": {
+                        "token": 54,
+                        "word": "Mountbatten",
+                        "count": 4
+                    },
+                    "55": {
+                        "token": 55,
+                        "word": "Windsor",
+                        "count": 4
+                    }
+                },
+                "information": [
+                    {
+                        "info": "O bebê real recebeu o nome de Archie Harrison.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ],
+                        "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu."
+                    },
+                    {
+                        "info": "A Duquesa de Sussex fez uma rápida aparição no Castelo de Windsor.",
+                        "tokens": [
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Acontecimento e circunstância; responde quem apareceu, onde e como foi a aparição."
+                    },
+                    {
+                        "info": "Durante a aparição, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+                        "tokens": [
+                            9,
+                            11,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29
+                        ],
+                        "context": "Declaração atribuída à Duquesa sobre o temperamento do bebê; responde o que ela disse sobre ele."
+                    },
+                    {
+                        "info": "O príncipe brincou.",
+                        "tokens": [
+                            30,
+                            31,
+                            32
+                        ],
+                        "context": "Ação do príncipe; responde o que ele fez."
+                    },
+                    {
+                        "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                        "tokens": [
+                            30,
+                            31,
+                            34,
+                            35,
+                            36,
+                            37,
+                            38,
+                            39,
+                            40,
+                            41
+                        ],
+                        "context": "Declaração do príncipe, incluindo a negação de saber a quem o bebê se parece; responde o que ele disse não saber."
+                    },
+                    {
+                        "info": "Horas depois, o casal divulgou o nome completo do bebê real: Archie Harrison Mountbatten-Windsor.",
+                        "tokens": [
+                            42,
+                            43,
+                            44,
+                            45,
+                            46,
+                            47,
+                            48,
+                            49,
+                            50,
+                            51,
+                            52,
+                            53,
+                            54,
+                            55
+                        ],
+                        "context": "Acontecimento posterior e nome divulgado; responde quando o casal divulgou o nome e qual foi o nome completo."
+                    },
+                    {
+                        "info": "O bebê real recebeu o nome de Archie Harrison.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ],
+                        "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu."
+                    },
+                    {
+                        "info": "A Duquesa de Sussex fez uma aparição rápida no Castelo de Windsor.",
+                        "tokens": [
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Circunstância de tempo e local associada à fala da Duquesa; responde onde e em que ocasião ela falou."
+                    },
+                    {
+                        "info": "Na aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+                        "tokens": [
+                            9,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29
+                        ],
+                        "context": "Relato atribuído à Duquesa sobre o temperamento do bebê; responde o que ela disse sobre ele."
+                    },
+                    {
+                        "info": "O príncipe brincou.",
+                        "tokens": [
+                            30,
+                            31,
+                            32
+                        ],
+                        "context": "Ação do príncipe; responde o que ele fez."
+                    },
+                    {
+                        "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                        "tokens": [
+                            30,
+                            31,
+                            34,
+                            35,
+                            36,
+                            37,
+                            38,
+                            39,
+                            40,
+                            41
+                        ],
+                        "context": "Declaração do príncipe, incluindo a negação de saber a quem o bebê se parece; responde o que ele disse."
+                    },
+                    {
+                        "info": "Horas depois, o casal divulgou o nome completo do bebê real: Archie Harrison Mountbatten-Windsor.",
+                        "tokens": [
+                            42,
+                            43,
+                            44,
+                            45,
+                            46,
+                            47,
+                            48,
+                            49,
+                            50,
+                            51,
+                            52,
+                            53,
+                            54,
+                            55
+                        ],
+                        "context": "Acontecimento posterior e nome divulgado pelo casal; responde quando o nome foi divulgado e qual foi o nome completo."
+                    },
+                    {
+                        "info": "A divulgação do nome completo pelo casal ocorreu horas depois da aparição rápida da Duquesa no Castelo de Windsor.",
+                        "tokens": [
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            42,
+                            43,
+                            45,
+                            46,
+                            48,
+                            49,
+                            50,
+                            51,
+                            52,
+                            53,
+                            54,
+                            55
+                        ],
+                        "context": "Relação temporal entre a aparição da Duquesa e a divulgação do nome pelo casal; responde quando a divulgação ocorreu em relação à aparição."
+                    },
+                    {
+                        "info": "O príncipe brincou e disse que não sabe a quem o bebê puxou.",
+                        "tokens": [
+                            30,
+                            31,
+                            32,
+                            33,
+                            34,
+                            35,
+                            36,
+                            37,
+                            38,
+                            39,
+                            40,
+                            41
+                        ],
+                        "context": "Relação entre as duas ações do príncipe, conectadas no relato; responde o que ele fez e disse."
+                    },
+                    {
+                        "info": "O bebê real recebeu o nome de Archie Harrison.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ],
+                        "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu."
+                    },
+                    {
+                        "info": "A Duquesa de Sussex fez uma rápida aparição no Castelo de Windsor.",
+                        "tokens": [
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Acontecimento e circunstância de local e duração; responde quem apareceu, onde e como foi a aparição."
+                    },
+                    {
+                        "info": "A Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+                        "tokens": [
+                            16,
+                            17,
+                            18,
+                            19,
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29
+                        ],
+                        "context": "Declaração atribuída à Duquesa e características do bebê; responde o que ela disse sobre ele."
+                    },
+                    {
+                        "info": "O príncipe brincou.",
+                        "tokens": [
+                            30,
+                            31,
+                            32,
+                            33
+                        ],
+                        "context": "Ação do príncipe; responde o que ele fez."
+                    },
+                    {
+                        "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                        "tokens": [
+                            30,
+                            31,
+                            33,
+                            34,
+                            35,
+                            36,
+                            37,
+                            38,
+                            39,
+                            40,
+                            41
+                        ],
+                        "context": "Declaração do príncipe, incluindo a incerteza expressa; responde o que ele disse não saber."
+                    },
+                    {
+                        "info": "O príncipe brincou e disse que não sabe a quem o bebê puxou.",
+                        "tokens": [
+                            30,
+                            31,
+                            32,
+                            33,
+                            34,
+                            35,
+                            36,
+                            37,
+                            38,
+                            39,
+                            40,
+                            41
+                        ],
+                        "context": "Relação de coordenação entre as ações do príncipe; responde o que ele fez e disse."
+                    },
+                    {
+                        "info": "Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+                        "tokens": [
+                            42,
+                            43,
+                            44,
+                            45,
+                            46,
+                            47,
+                            48,
+                            49,
+                            50,
+                            51,
+                            52,
+                            53,
+                            54,
+                            55
+                        ],
+                        "context": "Acontecimento posterior e nome divulgado pelo casal; responde quando o casal divulgou o nome e qual foi."
+                    }
+                ],
+                "set_different_information": [
+                    [
+                        {
+                            "info": "O bebê real recebeu o nome de Archie Harrison.",
+                            "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O bebê real recebeu o nome de Archie Harrison.",
+                            "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O bebê real recebeu o nome de Archie Harrison.",
+                            "context": "Fato sobre o nome inicialmente recebido pelo bebê real; responde qual nome ele recebeu.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "A Duquesa de Sussex fez uma rápida aparição no Castelo de Windsor.",
+                            "context": "Acontecimento e circunstância; responde quem apareceu, onde e como foi a aparição.",
+                            "avg_similarity": 0.9953064669981744
+                        },
+                        {
+                            "info": "A Duquesa de Sussex fez uma aparição rápida no Castelo de Windsor.",
+                            "context": "Circunstância de tempo e local associada à fala da Duquesa; responde onde e em que ocasião ela falou.",
+                            "avg_similarity": 0.9906129339963489
+                        },
+                        {
+                            "info": "A Duquesa de Sussex fez uma rápida aparição no Castelo de Windsor.",
+                            "context": "Acontecimento e circunstância de local e duração; responde quem apareceu, onde e como foi a aparição.",
+                            "avg_similarity": 0.9953064669981744
+                        }
+                    ],
+                    [
+                        {
+                            "info": "Durante a aparição, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+                            "context": "Declaração atribuída à Duquesa sobre o temperamento do bebê; responde o que ela disse sobre ele.",
+                            "avg_similarity": 0.9362198936805373
+                        },
+                        {
+                            "info": "Na aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+                            "context": "Relato atribuído à Duquesa sobre o temperamento do bebê; responde o que ela disse sobre ele.",
+                            "avg_similarity": 0.9354698326126474
+                        },
+                        {
+                            "info": "A Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+                            "context": "Declaração atribuída à Duquesa e características do bebê; responde o que ela disse sobre ele.",
+                            "avg_similarity": 0.9310041063723541
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O príncipe brincou.",
+                            "context": "Ação do príncipe; responde o que ele fez.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O príncipe brincou.",
+                            "context": "Ação do príncipe; responde o que ele fez.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O príncipe brincou.",
+                            "context": "Ação do príncipe; responde o que ele fez.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                            "context": "Declaração do príncipe, incluindo a negação de saber a quem o bebê se parece; responde o que ele disse não saber.",
+                            "avg_similarity": 0.9751672386650202
+                        },
+                        {
+                            "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                            "context": "Declaração do príncipe, incluindo a negação de saber a quem o bebê se parece; responde o que ele disse.",
+                            "avg_similarity": 0.9751672386650202
+                        },
+                        {
+                            "info": "O príncipe brincou e disse que não sabe a quem o bebê puxou.",
+                            "context": "Relação entre as duas ações do príncipe, conectadas no relato; responde o que ele fez e disse.",
+                            "avg_similarity": 0.9627508579975304
+                        },
+                        {
+                            "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+                            "context": "Declaração do príncipe, incluindo a incerteza expressa; responde o que ele disse não saber.",
+                            "avg_similarity": 0.9751672386650202
+                        },
+                        {
+                            "info": "O príncipe brincou e disse que não sabe a quem o bebê puxou.",
+                            "context": "Relação de coordenação entre as ações do príncipe; responde o que ele fez e disse.",
+                            "avg_similarity": 0.9627508579975304
+                        }
+                    ],
+                    [
+                        {
+                            "info": "Horas depois, o casal divulgou o nome completo do bebê real: Archie Harrison Mountbatten-Windsor.",
+                            "context": "Acontecimento posterior e nome divulgado; responde quando o casal divulgou o nome e qual foi o nome completo.",
+                            "avg_similarity": 0.997481960830293
+                        },
+                        {
+                            "info": "Horas depois, o casal divulgou o nome completo do bebê real: Archie Harrison Mountbatten-Windsor.",
+                            "context": "Acontecimento posterior e nome divulgado pelo casal; responde quando o nome foi divulgado e qual foi o nome completo.",
+                            "avg_similarity": 0.997481960830293
+                        },
+                        {
+                            "info": "Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+                            "context": "Acontecimento posterior e nome divulgado pelo casal; responde quando o casal divulgou o nome e qual foi.",
+                            "avg_similarity": 0.9949639216605859
+                        }
+                    ],
+                    [
+                        {
+                            "info": "A divulgação do nome completo pelo casal ocorreu horas depois da aparição rápida da Duquesa no Castelo de Windsor.",
+                            "context": "Relação temporal entre a aparição da Duquesa e a divulgação do nome pelo casal; responde quando a divulgação ocorreu em relação à aparição.",
+                            "avg_similarity": 1.0
+                        }
+                    ]
+                ]
             }
         ]
     },
@@ -14,10 +1049,851 @@
         "name": "jornal_da_record",
         "segments": [
             {
-                "content": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real. Foi no colo do pai, sorridente, que o mais novo bebê real foi apresentado ao mundo."
+                "content": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real. Foi no colo do pai, sorridente, que o mais novo bebê real foi apresentado ao mundo.",
+                "map": {
+                    "0": {
+                        "token": 0,
+                        "word": "A",
+                        "count": 2
+                    },
+                    "1": {
+                        "token": 1,
+                        "word": "duquesa",
+                        "count": 2
+                    },
+                    "2": {
+                        "token": 2,
+                        "word": "Meghan",
+                        "count": 2
+                    },
+                    "3": {
+                        "token": 3,
+                        "word": "Markle",
+                        "count": 2
+                    },
+                    "4": {
+                        "token": 4,
+                        "word": "e",
+                        "count": 2
+                    },
+                    "5": {
+                        "token": 5,
+                        "word": "o",
+                        "count": 2
+                    },
+                    "6": {
+                        "token": 6,
+                        "word": "príncipe",
+                        "count": 2
+                    },
+                    "7": {
+                        "token": 7,
+                        "word": "Harry",
+                        "count": 2
+                    },
+                    "8": {
+                        "token": 8,
+                        "word": "apresentaram",
+                        "count": 3
+                    },
+                    "9": {
+                        "token": 9,
+                        "word": "hoje",
+                        "count": 2
+                    },
+                    "10": {
+                        "token": 10,
+                        "word": "o",
+                        "count": 2
+                    },
+                    "11": {
+                        "token": 11,
+                        "word": "mais",
+                        "count": 3
+                    },
+                    "12": {
+                        "token": 12,
+                        "word": "novo",
+                        "count": 3
+                    },
+                    "13": {
+                        "token": 13,
+                        "word": "integrante",
+                        "count": 3
+                    },
+                    "14": {
+                        "token": 14,
+                        "word": "da",
+                        "count": 3
+                    },
+                    "15": {
+                        "token": 15,
+                        "word": "família",
+                        "count": 3
+                    },
+                    "16": {
+                        "token": 16,
+                        "word": "real",
+                        "count": 3
+                    },
+                    "17": {
+                        "token": 17,
+                        "word": "Foi",
+                        "count": 2
+                    },
+                    "18": {
+                        "token": 18,
+                        "word": "no",
+                        "count": 2
+                    },
+                    "19": {
+                        "token": 19,
+                        "word": "colo",
+                        "count": 2
+                    },
+                    "20": {
+                        "token": 20,
+                        "word": "do",
+                        "count": 3
+                    },
+                    "21": {
+                        "token": 21,
+                        "word": "pai",
+                        "count": 3
+                    },
+                    "22": {
+                        "token": 22,
+                        "word": "sorridente",
+                        "count": 2
+                    },
+                    "23": {
+                        "token": 23,
+                        "word": "que",
+                        "count": 4
+                    },
+                    "24": {
+                        "token": 24,
+                        "word": "o",
+                        "count": 6
+                    },
+                    "25": {
+                        "token": 25,
+                        "word": "mais",
+                        "count": 2
+                    },
+                    "26": {
+                        "token": 26,
+                        "word": "novo",
+                        "count": 2
+                    },
+                    "27": {
+                        "token": 27,
+                        "word": "bebê",
+                        "count": 6
+                    },
+                    "28": {
+                        "token": 28,
+                        "word": "real",
+                        "count": 4
+                    },
+                    "29": {
+                        "token": 29,
+                        "word": "foi",
+                        "count": 6
+                    },
+                    "30": {
+                        "token": 30,
+                        "word": "apresentado",
+                        "count": 6
+                    },
+                    "31": {
+                        "token": 31,
+                        "word": "ao",
+                        "count": 3
+                    },
+                    "32": {
+                        "token": 32,
+                        "word": "mundo",
+                        "count": 3
+                    }
+                },
+                "information": [
+                    {
+                        "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16
+                        ],
+                        "context": "Ação e participantes, com indicação temporal e identificação do apresentado; responde quem apresentou o novo integrante da família real e quando."
+                    },
+                    {
+                        "info": "O mais novo bebê real foi apresentado ao mundo.",
+                        "tokens": [
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29,
+                            30,
+                            31,
+                            32
+                        ],
+                        "context": "Acontecimento e destinatário da apresentação; responde o que aconteceu com o bebê real."
+                    },
+                    {
+                        "info": "O bebê real foi apresentado no colo do pai.",
+                        "tokens": [
+                            18,
+                            19,
+                            20,
+                            21,
+                            24,
+                            27,
+                            29,
+                            30
+                        ],
+                        "context": "Circunstância da apresentação; responde onde ou em que situação o bebê foi apresentado."
+                    },
+                    {
+                        "info": "O pai estava sorridente durante a apresentação do bebê real.",
+                        "tokens": [
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            27,
+                            29,
+                            30
+                        ],
+                        "context": "Característica do pai no contexto da apresentação; responde como estava o pai."
+                    },
+                    {
+                        "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram o mais novo integrante da família real.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16
+                        ],
+                        "context": "Ação e participantes; responde quem apresentou quem."
+                    },
+                    {
+                        "info": "A apresentação do mais novo integrante da família real ocorreu hoje.",
+                        "tokens": [
+                            8,
+                            9,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16
+                        ],
+                        "context": "Circunstância temporal da apresentação; responde quando ocorreu."
+                    },
+                    {
+                        "info": "O mais novo bebê real foi apresentado ao mundo.",
+                        "tokens": [
+                            17,
+                            23,
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29,
+                            30,
+                            31,
+                            32
+                        ],
+                        "context": "Acontecimento e destinatário; responde o que aconteceu e a quem o bebê foi apresentado."
+                    },
+                    {
+                        "info": "O bebê real foi apresentado no colo do pai.",
+                        "tokens": [
+                            17,
+                            18,
+                            19,
+                            20,
+                            21,
+                            23,
+                            24,
+                            27,
+                            28,
+                            29,
+                            30
+                        ],
+                        "context": "Circunstância da apresentação; responde onde ou em que situação o bebê foi apresentado."
+                    },
+                    {
+                        "info": "O bebê real estava sorridente quando foi apresentado ao mundo.",
+                        "tokens": [
+                            22,
+                            23,
+                            24,
+                            27,
+                            28,
+                            29,
+                            30,
+                            31,
+                            32
+                        ],
+                        "context": "Estado do bebê durante a apresentação; responde como ele estava."
+                    }
+                ],
+                "set_different_information": [
+                    [
+                        {
+                            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real.",
+                            "context": "Ação e participantes, com indicação temporal e identificação do apresentado; responde quem apresentou o novo integrante da família real e quando.",
+                            "avg_similarity": 0.9787963434503726
+                        },
+                        {
+                            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram o mais novo integrante da família real.",
+                            "context": "Ação e participantes; responde quem apresentou quem.",
+                            "avg_similarity": 0.9787963434503726
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O mais novo bebê real foi apresentado ao mundo.",
+                            "context": "Acontecimento e destinatário da apresentação; responde o que aconteceu com o bebê real.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O mais novo bebê real foi apresentado ao mundo.",
+                            "context": "Acontecimento e destinatário; responde o que aconteceu e a quem o bebê foi apresentado.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O bebê real foi apresentado no colo do pai.",
+                            "context": "Circunstância da apresentação; responde onde ou em que situação o bebê foi apresentado.",
+                            "avg_similarity": 1.0
+                        },
+                        {
+                            "info": "O bebê real foi apresentado no colo do pai.",
+                            "context": "Circunstância da apresentação; responde onde ou em que situação o bebê foi apresentado.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O pai estava sorridente durante a apresentação do bebê real.",
+                            "context": "Característica do pai no contexto da apresentação; responde como estava o pai.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "A apresentação do mais novo integrante da família real ocorreu hoje.",
+                            "context": "Circunstância temporal da apresentação; responde quando ocorreu.",
+                            "avg_similarity": 1.0
+                        }
+                    ],
+                    [
+                        {
+                            "info": "O bebê real estava sorridente quando foi apresentado ao mundo.",
+                            "context": "Estado do bebê durante a apresentação; responde como ele estava.",
+                            "avg_similarity": 1.0
+                        }
+                    ]
+                ]
             },
             {
-                "content": "E depois de se derreter em elogios à mulher, foi a vez do príncipe Harry ganhar palavras carinhosas da esposa. \"Tem os dois melhores caras do mundo, estou muito feliz\", completa Meghan."
+                "content": "E depois de se derreter em elogios à mulher, foi a vez do príncipe Harry ganhar palavras carinhosas da esposa. \"Tem os dois melhores caras do mundo, estou muito feliz\", completa Meghan.",
+                "map": {
+                    "0": {
+                        "token": 0,
+                        "word": "E",
+                        "count": 2
+                    },
+                    "1": {
+                        "token": 1,
+                        "word": "depois",
+                        "count": 4
+                    },
+                    "2": {
+                        "token": 2,
+                        "word": "de",
+                        "count": 4
+                    },
+                    "3": {
+                        "token": 3,
+                        "word": "se",
+                        "count": 4
+                    },
+                    "4": {
+                        "token": 4,
+                        "word": "derreter",
+                        "count": 4
+                    },
+                    "5": {
+                        "token": 5,
+                        "word": "em",
+                        "count": 4
+                    },
+                    "6": {
+                        "token": 6,
+                        "word": "elogios",
+                        "count": 4
+                    },
+                    "7": {
+                        "token": 7,
+                        "word": "à",
+                        "count": 4
+                    },
+                    "8": {
+                        "token": 8,
+                        "word": "mulher",
+                        "count": 4
+                    },
+                    "9": {
+                        "token": 9,
+                        "word": "foi",
+                        "count": 5
+                    },
+                    "10": {
+                        "token": 10,
+                        "word": "a",
+                        "count": 5
+                    },
+                    "11": {
+                        "token": 11,
+                        "word": "vez",
+                        "count": 5
+                    },
+                    "12": {
+                        "token": 12,
+                        "word": "do",
+                        "count": 5
+                    },
+                    "13": {
+                        "token": 13,
+                        "word": "príncipe",
+                        "count": 5
+                    },
+                    "14": {
+                        "token": 14,
+                        "word": "Harry",
+                        "count": 5
+                    },
+                    "15": {
+                        "token": 15,
+                        "word": "ganhar",
+                        "count": 5
+                    },
+                    "16": {
+                        "token": 16,
+                        "word": "palavras",
+                        "count": 5
+                    },
+                    "17": {
+                        "token": 17,
+                        "word": "carinhosas",
+                        "count": 5
+                    },
+                    "18": {
+                        "token": 18,
+                        "word": "da",
+                        "count": 5
+                    },
+                    "19": {
+                        "token": 19,
+                        "word": "esposa",
+                        "count": 5
+                    },
+                    "20": {
+                        "token": 20,
+                        "word": "Tem",
+                        "count": 4
+                    },
+                    "21": {
+                        "token": 21,
+                        "word": "os",
+                        "count": 4
+                    },
+                    "22": {
+                        "token": 22,
+                        "word": "dois",
+                        "count": 4
+                    },
+                    "23": {
+                        "token": 23,
+                        "word": "melhores",
+                        "count": 4
+                    },
+                    "24": {
+                        "token": 24,
+                        "word": "caras",
+                        "count": 4
+                    },
+                    "25": {
+                        "token": 25,
+                        "word": "do",
+                        "count": 4
+                    },
+                    "26": {
+                        "token": 26,
+                        "word": "mundo",
+                        "count": 4
+                    },
+                    "27": {
+                        "token": 27,
+                        "word": "estou",
+                        "count": 4
+                    },
+                    "28": {
+                        "token": 28,
+                        "word": "muito",
+                        "count": 4
+                    },
+                    "29": {
+                        "token": 29,
+                        "word": "feliz",
+                        "count": 4
+                    },
+                    "30": {
+                        "token": 30,
+                        "word": "completa",
+                        "count": 8
+                    },
+                    "31": {
+                        "token": 31,
+                        "word": "Meghan",
+                        "count": 8
+                    }
+                },
+                "information": [
+                    {
+                        "info": "Antes de o príncipe Harry receber palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Sequência temporal e contraste de reciprocidade entre os elogios de Harry à mulher e as palavras carinhosas que ele recebeu da esposa; responde o que aconteceu antes de Harry receber palavras carinhosas."
+                    },
+                    {
+                        "info": "Meghan afirma que tem os dois melhores caras do mundo.",
+                        "tokens": [
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            30,
+                            31
+                        ],
+                        "context": "Declaração de posse e avaliação; responde quem Meghan diz ter e como avalia essas pessoas."
+                    },
+                    {
+                        "info": "Meghan diz que está muito feliz.",
+                        "tokens": [
+                            27,
+                            28,
+                            29,
+                            30,
+                            31
+                        ],
+                        "context": "Estado emocional atribuído a Meghan; responde como ela se sente."
+                    },
+                    {
+                        "info": "Antes de Harry receber palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+                        "tokens": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Sequência temporal e relação entre acontecimentos; responde o que Harry fez antes de receber palavras carinhosas."
+                    },
+                    {
+                        "info": "Harry recebeu palavras carinhosas de sua esposa.",
+                        "tokens": [
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Acontecimento; responde quem recebeu palavras carinhosas e de quem."
+                    },
+                    {
+                        "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                        "tokens": [
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            30,
+                            31
+                        ],
+                        "context": "Declaração atribuída a Meghan; responde o que ela afirma ter."
+                    },
+                    {
+                        "info": "Meghan afirma estar muito feliz.",
+                        "tokens": [
+                            27,
+                            28,
+                            29,
+                            30,
+                            31
+                        ],
+                        "context": "Estado emocional declarado; responde como Meghan diz que está."
+                    },
+                    {
+                        "info": "Depois de se derreter em elogios à mulher, o príncipe Harry recebeu palavras carinhosas da esposa.",
+                        "tokens": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Sequência temporal e acontecimento: o que ocorreu depois de Harry elogiar a mulher?"
+                    },
+                    {
+                        "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                        "tokens": [
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            30,
+                            31
+                        ],
+                        "context": "Declaração atribuída a Meghan sobre o que ela tem."
+                    },
+                    {
+                        "info": "Meghan diz que está muito feliz.",
+                        "tokens": [
+                            27,
+                            28,
+                            29,
+                            30,
+                            31
+                        ],
+                        "context": "Estado emocional declarado por Meghan."
+                    },
+                    {
+                        "info": "Antes de Harry receber palavras carinhosas da esposa, ele havia se derretido em elogios à mulher.",
+                        "tokens": [
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19
+                        ],
+                        "context": "Relação temporal e sequência entre os elogios de Harry à mulher e as palavras carinhosas que ele recebeu da esposa; responde o que aconteceu antes de Harry receber palavras carinhosas."
+                    },
+                    {
+                        "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                        "tokens": [
+                            20,
+                            21,
+                            22,
+                            23,
+                            24,
+                            25,
+                            26,
+                            30,
+                            31
+                        ],
+                        "context": "Declaração de Meghan sobre as pessoas que considera os dois melhores caras do mundo; responde o que ela diz ter."
+                    },
+                    {
+                        "info": "Meghan afirma que está muito feliz.",
+                        "tokens": [
+                            27,
+                            28,
+                            29,
+                            30,
+                            31
+                        ],
+                        "context": "Estado emocional declarado por Meghan; responde como ela diz estar."
+                    }
+                ],
+                "set_different_information": [
+                    [
+                        {
+                            "info": "Antes de o príncipe Harry receber palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+                            "context": "Sequência temporal e contraste de reciprocidade entre os elogios de Harry à mulher e as palavras carinhosas que ele recebeu da esposa; responde o que aconteceu antes de Harry receber palavras carinhosas.",
+                            "avg_similarity": 0.9216760192854118
+                        },
+                        {
+                            "info": "Antes de Harry receber palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+                            "context": "Sequência temporal e relação entre acontecimentos; responde o que Harry fez antes de receber palavras carinhosas.",
+                            "avg_similarity": 0.9277274836054702
+                        },
+                        {
+                            "info": "Depois de se derreter em elogios à mulher, o príncipe Harry recebeu palavras carinhosas da esposa.",
+                            "context": "Sequência temporal e acontecimento: o que ocorreu depois de Harry elogiar a mulher?",
+                            "avg_similarity": 0.8956914613546424
+                        },
+                        {
+                            "info": "Antes de Harry receber palavras carinhosas da esposa, ele havia se derretido em elogios à mulher.",
+                            "context": "Relação temporal e sequência entre os elogios de Harry à mulher e as palavras carinhosas que ele recebeu da esposa; responde o que aconteceu antes de Harry receber palavras carinhosas.",
+                            "avg_similarity": 0.9232173114528291
+                        }
+                    ],
+                    [
+                        {
+                            "info": "Meghan afirma que tem os dois melhores caras do mundo.",
+                            "context": "Declaração de posse e avaliação; responde quem Meghan diz ter e como avalia essas pessoas.",
+                            "avg_similarity": 0.9809716768731641
+                        },
+                        {
+                            "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                            "context": "Declaração atribuída a Meghan; responde o que ela afirma ter.",
+                            "avg_similarity": 0.993657225624388
+                        },
+                        {
+                            "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                            "context": "Declaração atribuída a Meghan sobre o que ela tem.",
+                            "avg_similarity": 0.993657225624388
+                        },
+                        {
+                            "info": "Meghan diz que tem os dois melhores caras do mundo.",
+                            "context": "Declaração de Meghan sobre as pessoas que considera os dois melhores caras do mundo; responde o que ela diz ter.",
+                            "avg_similarity": 0.993657225624388
+                        }
+                    ],
+                    [
+                        {
+                            "info": "Meghan diz que está muito feliz.",
+                            "context": "Estado emocional atribuído a Meghan; responde como ela se sente.",
+                            "avg_similarity": 0.9684711037211665
+                        },
+                        {
+                            "info": "Meghan afirma estar muito feliz.",
+                            "context": "Estado emocional declarado; responde como Meghan diz que está.",
+                            "avg_similarity": 0.9639222587925215
+                        },
+                        {
+                            "info": "Meghan diz que está muito feliz.",
+                            "context": "Estado emocional declarado por Meghan.",
+                            "avg_similarity": 0.9684711037211665
+                        },
+                        {
+                            "info": "Meghan afirma que está muito feliz.",
+                            "context": "Estado emocional declarado por Meghan; responde como ela diz estar.",
+                            "avg_similarity": 0.9688803554511676
+                        }
+                    ],
+                    [
+                        {
+                            "info": "Harry recebeu palavras carinhosas de sua esposa.",
+                            "context": "Acontecimento; responde quem recebeu palavras carinhosas e de quem.",
+                            "avg_similarity": 1.0
+                        }
+                    ]
+                ]
             }
         ]
     }
