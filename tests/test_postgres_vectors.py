@@ -144,8 +144,8 @@ class PostgresIntegrationTests(unittest.TestCase):
                 vectors = {"precision-a": (1, 0), "precision-b": (.8499999999, math.sqrt(1 - .8499999999**2))}
                 return tuple(vectors[text] for text in texts)
         provider = Provider()
-        first = group_dataset(value, provider=provider, vector_store=self.store, profile=profile, threshold=.85)
-        second = group_dataset(first, provider=provider, vector_store=self.store, profile=profile, threshold=.85)
+        first = group_dataset(value, provider=provider, vector_store=self.store, profile=profile)
+        second = group_dataset(first, provider=provider, vector_store=self.store, profile=profile)
         self.assertEqual(first, second)
         self.assertEqual(provider.calls, 1)
         self.assertEqual(len(first[0]["segments"][0]["set_different_information"]), 1)

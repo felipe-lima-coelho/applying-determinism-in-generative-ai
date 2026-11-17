@@ -89,22 +89,27 @@ class GlobalCatalogTests(unittest.TestCase):
 
     def test_global_complete_linkage_blocks_chain_and_honors_inclusive_threshold(self):
         value = dataset(["A"], ["B"], ["C"])
-        matrix = ((1, .90, .70), (.90, 1, .90), (.70, .90, 1))
+        matrix = ((1, .85, .70), (.85, 1, .85), (.70, .85, 1))
         with patch("determinism.modules.semantic_grouping.application.global_catalog.cosine_matrix", return_value=matrix):
             catalog = self.group(value).global_catalog
-        self.assertEqual(catalog["metadata"]["threshold"], .90)
+        self.assertEqual(catalog["metadata"]["threshold"], .85)
         self.assertEqual([item["member_indices"] for item in catalog["canonical_information"]], [[0, 1], [2]])
         for item in catalog["canonical_information"]:
             for first in item["member_indices"]:
-                self.assertTrue(all(matrix[first][second] >= .90 for second in item["member_indices"]))
+                self.assertTrue(all(matrix[first][second] >= .85 for second in item["member_indices"]))
 
     def test_explicit_threshold_is_shared_by_local_and_global_stages(self):
         self.provider.vectors["B"] = (math.cos(math.radians(30)), math.sin(math.radians(30)))
-        value = dataset(["A"], ["B"])
-        self.assertEqual(len(self.group(value).global_catalog["canonical_information"]), 2)
-        catalog = self.group(value, threshold=.85).global_catalog
-        self.assertEqual(catalog["metadata"]["threshold"], .85)
-        self.assertEqual(catalog["canonical_information"][0]["member_indices"], [0, 1])
+        value = dataset(["A", "B"], ["A"], ["B"])
+        default = self.group(value)
+        self.assertEqual(len(default.dataset[0]["segments"][0]["canonical_information"]), 1)
+        self.assertEqual(default.global_catalog["metadata"]["threshold"], .85)
+        self.assertEqual(default.global_catalog["canonical_information"][0]["member_indices"], [0, 1, 2])
+        self.assertEqual(self.build(default.dataset), default.global_catalog)
+        strict = self.group(value, threshold=.90)
+        self.assertEqual(len(strict.dataset[0]["segments"][0]["canonical_information"]), 2)
+        self.assertEqual(strict.global_catalog["metadata"]["threshold"], .90)
+        self.assertEqual(len(strict.global_catalog["canonical_information"]), 2)
 
     def test_context_tokens_syntagm_and_metadata_do_not_enter_global_scores(self):
         value = dataset(["A"], ["B"])

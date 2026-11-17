@@ -17,7 +17,7 @@ class GlobalCatalogBuilder:
     vector_store: VectorStore | None
     profile: EmbeddingProfile
     strategy: GroupingStrategy
-    threshold: float = 0.90
+    threshold: float = 0.85
 
     def __post_init__(self) -> None:
         if type(self.threshold) not in (int, float) or not math.isfinite(self.threshold) or not -1 <= self.threshold <= 1:

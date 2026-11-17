@@ -19,7 +19,7 @@ from ..pipelines import Pipeline
 
 def grouping_pipeline(
     provider: EmbeddingProvider, vector_store: VectorStore, profile: EmbeddingProfile, *,
-    strategy: GroupingStrategy | None = None, threshold: float = 0.90,
+    strategy: GroupingStrategy | None = None, threshold: float = 0.85,
 ) -> Pipeline[Dataset]:
     return Pipeline((GroupingStage(provider, vector_store, profile, strategy if strategy is not None else CompleteLinkageGrouping(), threshold),))
 
@@ -43,7 +43,7 @@ class SemanticGroupingExperiment:
 def group_dataset(
     dataset: Dataset, *, provider: EmbeddingProvider, vector_store: VectorStore,
     profile: EmbeddingProfile, strategy: GroupingStrategy | None = None,
-    threshold: float = 0.90,
+    threshold: float = 0.85,
 ) -> Dataset:
     return grouping_pipeline(provider, vector_store, profile, strategy=strategy, threshold=threshold).run(dataset)
 
@@ -56,7 +56,7 @@ class GroupingResult:
 
 def build_global_catalog(
     dataset: Dataset, *, vector_store: VectorStore | None, profile: EmbeddingProfile,
-    strategy: GroupingStrategy | None = None, threshold: float = 0.90,
+    strategy: GroupingStrategy | None = None, threshold: float = 0.85,
 ) -> dict[str, Any]:
     return GlobalCatalogBuilder(
         vector_store, profile, strategy if strategy is not None else CompleteLinkageGrouping(), threshold,
@@ -65,7 +65,7 @@ def build_global_catalog(
 
 def group_dataset_with_catalog(
     dataset: Dataset, *, provider: EmbeddingProvider, vector_store: VectorStore,
-    profile: EmbeddingProfile, strategy: GroupingStrategy | None = None, threshold: float = 0.90,
+    profile: EmbeddingProfile, strategy: GroupingStrategy | None = None, threshold: float = 0.85,
 ) -> GroupingResult:
     grouped = group_dataset(dataset, provider=provider, vector_store=vector_store, profile=profile,
                             strategy=strategy, threshold=threshold)

@@ -22,7 +22,7 @@ class GroupingConfig:
     provider: str = "openai"
     model: str = "text-embedding-3-small"
     base_url: str = "https://api.openai.com/v1"
-    threshold: float = 0.90
+    threshold: float = 0.85
     dimensions: int | None = None
     batch_size: int = 32
     timeout_seconds: float = 60.0
