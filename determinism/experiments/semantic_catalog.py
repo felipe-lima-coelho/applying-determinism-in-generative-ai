@@ -7,7 +7,6 @@ from ..modules.semantic_catalog.adapters import (
     CatalogConfig, OpenAICompatibleCatalogProvider, contract_fingerprint, load_catalog_config, read_api_key,
 )
 from ..modules.semantic_catalog.adapters.json_artifacts import JsonResponseCache, read_json, write_json
-from ..modules.semantic_catalog.adapters.embeddings import CatalogEmbeddingAdapter
 from ..modules.semantic_catalog.application import CatalogStage
 from ..modules.semantic_catalog.domain import CatalogError, simulate_removal
 from ..modules.text_mapping.adapters import JsonDatasetRepository
@@ -31,17 +30,6 @@ class _ConfiguredProvider:
     def assess(self, segment, facts):
         return self._provider().assess(segment, facts)
 
-    def embed(self, texts):
-        from ..modules.semantic_grouping.adapters.configuration import read_embedding_api_key
-        from ..modules.semantic_grouping.adapters.openai_embeddings import OpenAIEmbeddingProvider
-        from ..modules.semantic_grouping.domain import GroupingError
-        try:
-            config = self.config.embedding_config
-            provider = OpenAIEmbeddingProvider(config, read_embedding_api_key(config, self.env_file))
-            return CatalogEmbeddingAdapter(provider).embed(texts)
-        except GroupingError as error:
-            raise CatalogError(str(error)) from None
-
 
 def _destination(path, *protected):
     destination = Path(path).resolve()
@@ -59,38 +47,27 @@ def _destination(path, *protected):
 
 
 def build_catalog(dataset, *, provider, max_concurrency=4, comparison_batch_size=24,
-                  assessment_batch_size=16, cache=None, provenance=None, embedding_provider=None,
-                  similarity_threshold=0.85, embedding_batch_size=32, embedding_dimensions=None):
+                  assessment_batch_size=16, cache=None, provenance=None):
     """API em memória. O provedor e cache são substituíveis; o dataset não é modificado."""
     return CatalogStage(provider, max_concurrency, comparison_batch_size, assessment_batch_size,
-                        cache, {} if provenance is None else provenance, embedding_provider,
-                        similarity_threshold, embedding_batch_size, embedding_dimensions)(dataset)
+                        cache, {} if provenance is None else provenance)(dataset)
 
 
 def run_catalog(input_path, output_path, *, config: CatalogConfig | None = None, provider=None,
-                env_file=".env", cache_dir=None, provider_identity=None, embedding_provider=None,
-                embedding_provider_identity=None):
+                env_file=".env", cache_dir=None, provider_identity=None):
     destination = _destination(output_path, input_path)
     dataset = JsonDatasetRepository().load(Path(input_path))
     selected = config if config is not None else load_catalog_config()
-    provenance = {"configuration": asdict(selected), "contract_fingerprint": contract_fingerprint(),
-                  "embedding_profile": selected.embedding_config.profile.metadata}
+    provenance = {"configuration": asdict(selected), "contract_fingerprint": contract_fingerprint()}
     if provider is not None:
         if cache_dir is not None and not provider_identity:
             raise CatalogError("Cache de provedor injetado exige provider_identity versionado.")
         provenance["injected_provider"] = provider_identity or f"{type(provider).__module__}.{type(provider).__qualname__}"
-    if embedding_provider is not None:
-        if cache_dir is not None and not embedding_provider_identity:
-            raise CatalogError("Cache de embeddings injetado exige embedding_provider_identity versionado.")
-        provenance["injected_embedding_provider"] = (embedding_provider_identity or
-            f"{type(embedding_provider).__module__}.{type(embedding_provider).__qualname__}")
     selected_provider = provider if provider is not None else _ConfiguredProvider(selected, env_file)
     catalog = build_catalog(
         dataset, provider=selected_provider, max_concurrency=selected.max_concurrency,
         comparison_batch_size=selected.comparison_batch_size, assessment_batch_size=selected.assessment_batch_size,
         cache=JsonResponseCache(Path(cache_dir)) if cache_dir is not None else None, provenance=provenance,
-        embedding_provider=embedding_provider, similarity_threshold=selected.similarity_threshold,
-        embedding_batch_size=selected.embedding_batch_size, embedding_dimensions=selected.embedding_dimensions,
     )
     write_json(destination, catalog)
     return catalog

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Set
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from .contracts import CatalogError, validate_catalog
+from .contracts import CatalogError, SCHEMA_VERSION, validate_catalog
 
 
 def _selection(values: Iterable[str], known: Set[str], name: str) -> set[str]:
@@ -110,7 +110,7 @@ class RemovalSimulator:
             removed.update(self.__source_segments[source_id])
         retained = self.__known_segments - removed
         result = {
-            "schema_version": 1,  # Contrato do relatório permanece igual para catálogos v1 e v2.
+            "schema_version": SCHEMA_VERSION,
             "catalog_id": self.__catalog_id,
             "dataset_fingerprint": self.__dataset_fingerprint,
             "removed_segment_ids": sorted(removed, key=self.__segment_order),

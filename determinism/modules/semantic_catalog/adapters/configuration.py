@@ -1,7 +1,6 @@
 """Parâmetros explícitos do catálogo; credenciais não entram nos artefatos."""
 
 import tomllib
-import math
 from dataclasses import dataclass, fields
 from importlib.resources import files
 from pathlib import Path
@@ -27,15 +26,6 @@ class CatalogConfig:
     comparison_batch_size: int = 24
     assessment_batch_size: int = 16
     cache_revision: str = "1"
-    similarity_threshold: float = 0.85
-    embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
-    embedding_base_url: str = "https://api.openai.com/v1"
-    embedding_dimensions: int | None = None
-    embedding_batch_size: int = 32
-    embedding_timeout_seconds: float = 60.0
-    embedding_api_key_env: str = "OPENAI_API_KEY"
-    embedding_cache_revision: str = "1"
 
     def __post_init__(self) -> None:
         # Compartilha a política já usada pelos adaptadores de Chat Completions,
@@ -56,23 +46,6 @@ class CatalogConfig:
                 raise ConfigurationError("Identificadores da configuração devem usar UTF-8 válido.") from None
             if any(ord(character) < 32 for character in value):
                 raise ConfigurationError("Identificadores da configuração não podem conter caracteres de controle.")
-        if (type(self.similarity_threshold) not in (int, float) or not math.isfinite(self.similarity_threshold)
-                or not -1 <= self.similarity_threshold <= 1):
-            raise ConfigurationError("similarity_threshold deve ser finito e estar entre -1 e 1.")
-        self.embedding_config  # Valida o perfil completo antes de qualquer inferência.
-
-    @property
-    def embedding_config(self):
-        from ...semantic_grouping.adapters.configuration import GroupingConfig, GroupingConfigurationError
-        try:
-            return GroupingConfig(
-                provider=self.embedding_provider, model=self.embedding_model, base_url=self.embedding_base_url,
-                threshold=self.similarity_threshold, dimensions=self.embedding_dimensions,
-                batch_size=self.embedding_batch_size, timeout_seconds=self.embedding_timeout_seconds,
-                api_key_env=self.embedding_api_key_env, cache_revision=self.embedding_cache_revision,
-            )
-        except GroupingConfigurationError as error:
-            raise ConfigurationError(f"Configuração de embeddings do catálogo: {error}") from None
 
 
 def load_catalog_config(path: str | Path | None = None) -> CatalogConfig:
