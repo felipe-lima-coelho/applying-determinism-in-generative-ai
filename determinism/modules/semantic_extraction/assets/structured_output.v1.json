@@ -4,30 +4,50 @@
     "strict": true,
     "schema": {
         "type": "object",
-        "description": "Resultado da extração de unidades informacionais de um trecho.",
+        "description": "Resultado da extração de unidades informacionais com evidências e representação em triplas.",
         "properties": {
             "informacoes": {
                 "type": "array",
-                "description": "Informações semânticas distintas identificadas no trecho.",
+                "description": "Informações semânticas distintas identificadas no trecho. Cada item contém uma afirmação e sua tripla equivalente.",
                 "items": {
                     "type": "object",
                     "properties": {
                         "info": {
                             "type": "string",
-                            "description": "Afirmação semanticamente completa, autossuficiente e sustentada pelo texto."
+                            "description": "Afirmação completa, autossuficiente e sustentada pelo trecho, preservando atribuição, polaridade, modalidade e demais qualificações necessárias."
                         },
                         "tokens": {
                             "type": "array",
-                            "description": "IDs das palavras que sustentam a informação, em ordem crescente, sem repetições e com pelo menos dois IDs distintos.",
+                            "description": "IDs das palavras originais que sustentam info e syntagm, em ordem crescente, sem repetições e com pelo menos dois IDs distintos.",
                             "items": {"type": "integer"},
                             "minItems": 2
                         },
                         "context": {
                             "type": "string",
-                            "description": "Natureza da informação e tipo de pergunta que a afirmação pode responder."
+                            "description": "Natureza semântica da informação e tipo de pergunta que ela pode responder, sem acrescentar fatos."
+                        },
+                        "syntagm": {
+                            "type": "object",
+                            "description": "Tripla sujeito-relação-objeto semanticamente equivalente a info e sustentada pelos mesmos tokens.",
+                            "properties": {
+                                "subject": {
+                                    "type": "string",
+                                    "description": "Entidade, conceito, acontecimento ou proposição sobre o qual se estabelece a relação."
+                                },
+                                "relation": {
+                                    "type": "string",
+                                    "description": "Predicado ou expressão relacional, preservando negação, modalidade e modificadores necessários ao significado."
+                                },
+                                "object": {
+                                    "type": "string",
+                                    "description": "Entidade, conceito, atributo, complemento, acontecimento ou proposição relacionado ao sujeito. Use string vazia somente para predicados completos sem objeto ou complemento."
+                                }
+                            },
+                            "required": ["subject", "relation", "object"],
+                            "additionalProperties": false
                         }
                     },
-                    "required": ["info", "tokens", "context"],
+                    "required": ["info", "tokens", "context", "syntagm"],
                     "additionalProperties": false
                 }
             }

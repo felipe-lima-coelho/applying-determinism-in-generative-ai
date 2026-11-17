@@ -107,18 +107,22 @@ A configuração versionada está em [`determinism/experiments/configs/semantic_
 
 Cada segmento precisa ter `map` válido **antes** da execução. Não há remapeamento implícito: conteúdo, IDs, palavras e metadados são preservados. A extração altera somente `information` e os respectivos `count`. Todos os segmentos, mapas e informações anteriores são validados antes da primeira chamada, incluindo IDs consecutivos a partir de zero, correspondência entre chave e `token`, palavras não vazias e `count` inteiro não negativo. O histórico usa o mesmo contrato estrito das respostas novas; `information` ausente equivale a uma lista vazia. Isso valida a estrutura; a correspondência semântica entre um mapa antigo e um texto posteriormente editado é responsabilidade de quem prepara o experimento.
 
+O contrato atual exige `syntagm` em cada informação. Históricos anteriores que contêm apenas `info`, `tokens` e `context` são rejeitados com diagnóstico explícito antes de qualquer inferência ou escrita, inclusive quando seus contadores já indicam cobertura completa. Não há conversão automática de frases em triplas nem descarte de histórico. Para reextrair um arquivo antigo, preserve primeiro uma cópia integral do arquivo original e prepare explicitamente uma entrada derivada com `information: []` e contagens zeradas, mantendo o mesmo conteúdo, IDs, palavras e metadados. A reextração faz novas chamadas à API. Não use esse procedimento para retomar um histórico válido no contrato atual.
+
 O adaptador mantém estas partes separadas:
 
 1. `modules/semantic_extraction/assets/system_prompt.v1.txt`: texto de sistema fixo fornecido para o experimento.
-2. Mensagem de usuário: somente a introdução fixa, `<trecho>` e `<mapeamento_tokens>`, projetando o mapa para `token` e `word`. O texto é escapado como dados XML; caracteres delimitadores dentro das palavras usam escapes JSON reversíveis. Nenhuma regra ou schema é repetido nessa mensagem.
+2. Mensagem de usuário: introdução fixa e orientação para preencher `info`, `tokens`, `context` e `syntagm`, seguidas de `<trecho>` e `<mapeamento_tokens>`, projetando o mapa para `token` e `word`. O texto é escapado como dados XML; caracteres delimitadores dentro das palavras usam escapes JSON reversíveis. O schema permanece separado dessa mensagem.
 3. `modules/semantic_extraction/assets/structured_output.v1.json`: schema fixo enviado em `response_format` como JSON Schema estrito.
 4. Um bloco suplementar com instruções fixas de revisão da cobertura e estado numérico dinâmico: ordinal da geração nesta execução, meta, IDs/contagens ainda abaixo de dois e número de referências que faltam (`needed`). Ele é anexado ao texto base, preservado literalmente, na mesma mensagem de sistema; a chamada continua com exatamente duas mensagens, uma de sistema e uma de usuário. O estado é derivado somente das referências validadas, ordenado por ID e recalculado antes de cada chamada, inclusive a primeira quando há histórico. Nenhuma palavra, informação extraída ou outro texto do dataset é promovido a instrução de sistema. A orientação pede a revisão das orações completas, incluindo palavras funcionais, ocorrências repetidas, verbos de ligação/auxiliares e construções de realce quando sustentam uma afirmação; a fidelidade semântica continua prioritária. A mensagem de usuário continua contendo somente texto e mapa.
 
 A resposta da API tem raiz `{"informacoes": [...]}`. Cada lista validada é **acrescentada**, em ordem, a `segment["information"]`, preservando todo o histórico. Cada referência a um token contribui uma unidade para seu `count`, por informação: duas informações na mesma geração que incluem o token contribuem duas unidades. Informações iguais, inclusive entre gerações, são mantidas e contam novamente; `count` mede referências acumuladas, sem avaliar se os fatos são semanticamente distintos. Não são salvos envelope da API, modelo, fingerprint, credenciais ou registros separados por geração.
 
+Cada item persistido contém exatamente `info`, `tokens`, `context` e `syntagm`. A tripla tem exatamente `subject`, `relation` e `object`, todos strings, e deve expressar a mesma informação de `info` com as mesmas evidências. `subject` e `relation` precisam ser preenchidos; `object` aceita `""` para predicados completos sem complemento, como em `{"subject": "Ana", "relation": "dormiu", "object": ""}`. A validação copia também esse objeto para evitar compartilhamento mutável com o provedor ou com o histórico de entrada. As regras do prompt preservam atribuição, modalidade, condição, negação, quantificação e argumentos necessários; a validação estrutural não comprova equivalência semântica ou suporte factual.
+
 No início, os contadores são recalculados a partir de **todas** as informações existentes, sem somar os `count` antigos. Assim, um histórico válido com contagens antigas ou zeradas pode ser retomado sem perder informações nem contar duas vezes. Após cada geração validada, o código acrescenta a lista, incrementa as referências e verifica se **todos** os tokens do mapa têm `count >= 2`. Por exemplo, as listas de IDs `[0, 1]` e `[0, 2]` produzem contagens `2, 1, 1`; uma próxima informação com `[1, 2]` completa a meta `2, 2, 2`. Contagens acima de dois são preservadas. Um segmento já coberto não faz novas chamadas. Um mapa vazio satisfaz a condição sem inferência; um mapa com somente um token é rejeitado antes de qualquer chamada, pois o contrato de cada informação exige pelo menos dois IDs distintos conhecidos.
 
-A validação adicional rejeita campos extras/ausentes, strings vazias ou sem letras/números, menos de dois IDs por informação, IDs booleanos/desconhecidos/repetidos ou fora de ordem. Uma geração pode retornar lista vazia ou cobertura parcial; nesse caso o segmento continua. A aplicação não fabrica informações para cobrir tokens; a qualidade e o suporte factual das afirmações ainda precisam de avaliação científica.
+A validação adicional rejeita campos extras/ausentes, inclusive dentro de `syntagm`, strings vazias ou sem letras/números (com a exceção de `object: ""`), menos de dois IDs por informação, IDs booleanos/desconhecidos/repetidos ou fora de ordem. Uma geração pode retornar lista vazia ou cobertura parcial; nesse caso o segmento continua. A aplicação não fabrica informações para cobrir tokens; a qualidade e o suporte factual das afirmações ainda precisam de avaliação científica.
 
 `max_generations_per_segment` é uma proteção finita contra omissões persistentes, inclusive gerações vazias. O limite conta somente novas chamadas desta execução. Cada nova chamada recebe o estado atual dos IDs pendentes; o ordinal muda mesmo se a resposta anterior não avançar, sem alterar modelo, temperatura, seed ou schema. Se a última geração permitida ainda deixar algum token abaixo de dois, a execução falha com `IncompleteCoverageError`, identificando **todos** os segmentos incompletos, IDs pendentes e suas contagens, inclusive segmentos que ainda não iniciaram. O limite nunca transforma cobertura incompleta em sucesso.
 
@@ -147,20 +151,22 @@ api_key_env = "LOCAL_AI_API_KEY"
 Execute com `--config <arquivo.toml>`. A credencial é opcional nesse provedor. `reasoning_effort = "omit"` omite **somente esse campo por escolha explícita**, para servidores que não o aceitam. O servidor precisa oferecer `/chat/completions` e aceitar `temperature`, `seed`, `max_completion_tokens`, `store = false` e Structured Outputs estrito; essa compatibilidade depende do servidor e do modelo. Os parâmetros exigidos não são descartados automaticamente. A porta `InferenceProvider` permite implementar outros provedores, inclusive locais sem HTTP, sem modificar o domínio ou a aplicação:
 
 ```python
-from determinism.experiments import extract_dataset
+from determinism.experiments import extract_dataset, map_dataset
 from determinism.modules.semantic_extraction.domain import InferenceResult
 
 class OfflineExample:
     def extract(self, segment):
-        # Simulação da porta: repete o trecho inteiro, sem decomposição semântica.
+        # Simulação da porta para o trecho fixo deste exemplo.
         return InferenceResult({"informacoes": [{
-            "info": segment.content,
-            "tokens": [entry.token for entry in segment.tokens],
-            "context": "O que foi afirmado no trecho?",
+            "info": "Ana dormiu.",
+            "tokens": [0, 1],
+            "context": "O que Ana fez?",
+            "syntagm": {"subject": "Ana", "relation": "dormiu", "object": ""},
         }]})
 
+example_mapped = map_dataset([{"segments": [{"content": "Ana dormiu."}]}])
 extracted = extract_dataset(
-    mapped, provider=OfflineExample(), max_concurrency=2, max_generations_per_segment=10,
+    example_mapped, provider=OfflineExample(), max_concurrency=2, max_generations_per_segment=10,
 )
 ```
 
@@ -196,7 +202,7 @@ docker compose -f compose.semantic-grouping.yaml start --wait
 
 ### Regras e formato
 
-Todo o dataset é validado antes de consultar o cache ou o provedor. Cada segmento precisa de `information` como lista; cada item precisa de `info` não vazio e `context` string UTF-8. Contexto vazio é permitido, e somente `info` é enviado ao provedor. `information: []` produz `set_different_information: []`, sem inferência; a ausência da lista é um erro explícito. `tokens` e campos adicionais permanecem no histórico original, mas não entram na saída do agrupamento:
+Todo o dataset é validado antes de consultar o cache ou o provedor. Cada segmento precisa de `information` como lista; cada item precisa de `info` não vazio e `context` string UTF-8. Contexto vazio é permitido, e somente `info` é enviado ao provedor. `information: []` produz `set_different_information: []`, sem inferência; a ausência da lista é um erro explícito. `tokens`, `syntagm` e campos adicionais permanecem integralmente no histórico original, mas não entram na saída do agrupamento. O catálogo também preserva `syntagm` no snapshot das informações de origem:
 
 ```json
 "set_different_information": [

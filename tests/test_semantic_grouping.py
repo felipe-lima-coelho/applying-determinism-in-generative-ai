@@ -174,6 +174,21 @@ class GroupingApplicationTests(unittest.TestCase):
             group_dataset(value, provider=self.provider, vector_store=self.store, profile=replace(self.profile, **values))
         self.assertEqual(len(self.provider.calls), 5)
 
+    def test_extraction_triples_are_preserved_in_history_and_only_info_is_embedded(self):
+        value = dataset(["A", "B"])
+        items = value[0]["segments"][0]["information"]
+        items[0]["syntagm"] = {"subject": "Ana", "relation": "dormiu", "object": ""}
+        items[1]["syntagm"] = {"subject": "Bruno", "relation": "comprou", "object": "um livro"}
+        original = copy.deepcopy(value)
+        result = self.group(value)
+        self.assertEqual(value, original)
+        self.assertEqual(result[0]["segments"][0]["information"], items)
+        self.assertEqual(self.provider.calls, [("A", "B")])
+        self.assertTrue(all(set(item) == {"info", "context", "avg_similarity"}
+                            for group in result[0]["segments"][0]["set_different_information"] for item in group))
+        items[0]["syntagm"]["subject"] = "Outra pessoa"
+        self.assertEqual(result[0]["segments"][0]["information"], original[0]["segments"][0]["information"])
+
     def test_raw_and_cached_threshold_results_use_same_persisted_float32_representation(self):
         below = .8499999999
         vectors = {"A": (1, 0), "B": (below, math.sqrt(1 - below**2))}

@@ -99,6 +99,24 @@ class NeverProvider:
 
 
 class CatalogBuildingTests(unittest.TestCase):
+    def test_extraction_triples_reach_provider_and_are_preserved_in_catalog_snapshot(self):
+        dataset = dataset_for(["Ana dormiu."])
+        information = [{
+            "info": "Ana dormiu.", "tokens": [0, 1], "context": "O que Ana fez?",
+            "syntagm": {"subject": "Ana", "relation": "dormiu", "object": ""},
+        }]
+        dataset[0]["segments"][0]["information"] = information
+        original = copy.deepcopy(dataset)
+        provider = ControlledProvider({"s0.seg0": [candidate("Ana dormiu.", indices=[0])]})
+        catalog = CatalogStage(provider)(dataset)
+        self.assertEqual(dataset, original)
+        self.assertEqual(catalog["segments"][0]["information"], information)
+        extracted_segment = next(arguments for operation, arguments in provider.calls if operation == "extract")
+        self.assertEqual(extracted_segment["information"], information)
+        self.assertEqual(catalog["candidates"][0]["information_indices"], [0])
+        information[0]["syntagm"]["subject"] = "Outra pessoa"
+        self.assertEqual(catalog["segments"][0]["information"], original[0]["segments"][0]["information"])
+
     def test_dataset_is_unchanged_and_grouping_does_not_erase_specific_detail(self):
         original_text = "Harry e Meghan apareceram em público com o filho pela primeira vez."
         dataset = dataset_for([original_text, APPEARANCE])

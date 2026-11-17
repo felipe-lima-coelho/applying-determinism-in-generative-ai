@@ -47,8 +47,11 @@ def mapped_dataset(count=1):
     }]
 
 
-def information(content="Um fato completo.", tokens=None):
-    return {"informacoes": [{"info": content, "tokens": [0, 1] if tokens is None else tokens, "context": "Qual fato foi expresso?"}]}
+def information(content="Um fato completo.", tokens=None, syntagm=None):
+    return {"informacoes": [{
+        "info": content, "tokens": [0, 1] if tokens is None else tokens, "context": "Qual fato foi expresso?",
+        "syntagm": {"subject": "Um fato", "relation": "é", "object": "completo"} if syntagm is None else syntagm,
+    }]}
 
 
 def coverage_state(body):
@@ -124,6 +127,9 @@ class ExtractionDomainTests(unittest.TestCase):
             {"informacoes": [{"info": "Fato.", "tokens": [0, 1]}]},
             {"informacoes": [{"info": "Fato.", "tokens": [0, 1], "context": "Pergunta?", "extra": True}]},
         ]
+        extra = information()
+        extra["informacoes"][0]["extra"] = True
+        payloads.append(extra)
         for tokens in ([0], [0, 0], [1, 0], [0, 3], [False, 1], [0, 1.0], ["0", 1], (0, 1)):
             payloads.append(information(tokens=tokens))
         for field in ("info", "context"):
@@ -135,6 +141,33 @@ class ExtractionDomainTests(unittest.TestCase):
             with self.subTest(payload=payload):
                 with self.assertRaises(ResponseValidationError):
                     validate_information(payload, segment)
+
+    def test_syntagm_requires_exact_fields_and_meaningful_subject_and_relation(self):
+        segment = validate_mapped_dataset(mapped_dataset())[0]
+        valid = {"subject": "Ana", "relation": "dormiu", "object": ""}
+        invalid = [None, [], "Ana dormiu", {**valid, "extra": "valor"}]
+        invalid.extend({key: value for key, value in valid.items() if key != missing} for missing in valid)
+        for field in valid:
+            values = (None, 3, True, [], {}, " ", "!!!")
+            if field != "object":
+                values += ("",)
+            invalid.extend({**valid, field: value} for value in values)
+        for syntagm in invalid:
+            payload = information("Ana dormiu.")
+            payload["informacoes"][0]["syntagm"] = syntagm
+            with self.subTest(syntagm=syntagm), self.assertRaisesRegex(ResponseValidationError, "syntagm"):
+                validate_information(payload, segment)
+
+    def test_complete_predicate_allows_empty_object_and_nested_result_is_copied(self):
+        segment = validate_mapped_dataset(mapped_dataset())[0]
+        payload = information("Ana dormiu.", syntagm={"subject": "Ana", "relation": "dormiu", "object": ""})
+        expected = copy.deepcopy(payload["informacoes"])
+        validated = validate_information(payload, segment)
+        self.assertEqual(validated, expected)
+        self.assertIsNot(validated[0]["syntagm"], payload["informacoes"][0]["syntagm"])
+        payload["informacoes"][0]["syntagm"]["subject"] = "Outra pessoa"
+        payload["informacoes"][0]["tokens"].clear()
+        self.assertEqual(validated, expected)
 
     def test_coverage_does_not_force_fabrication_or_rejection(self):
         segment = validate_mapped_dataset(mapped_dataset())[0]
@@ -474,7 +507,24 @@ class ExtractionAdapterTests(unittest.TestCase):
         self.assertEqual(body["response_format"], {"type": contract["type"], "json_schema": {k: contract[k] for k in ("name", "strict", "schema")}})
         self.assertTrue(body["response_format"]["json_schema"]["strict"])
         self.assertEqual(body["response_format"]["json_schema"]["schema"]["properties"]["informacoes"]["items"]["properties"]["tokens"]["minItems"], 2)
+        item_schema = body["response_format"]["json_schema"]["schema"]["properties"]["informacoes"]["items"]
+        self.assertEqual(item_schema["required"], ["info", "tokens", "context", "syntagm"])
+        self.assertFalse(item_schema["additionalProperties"])
+        triple_schema = item_schema["properties"]["syntagm"]
+        self.assertEqual(triple_schema["type"], "object")
+        self.assertEqual(triple_schema["required"], ["subject", "relation", "object"])
+        self.assertFalse(triple_schema["additionalProperties"])
+        self.assertEqual(set(triple_schema["properties"]), {"subject", "relation", "object"})
+        self.assertTrue(all(field["type"] == "string" for field in triple_schema["properties"].values()))
+        self.assertNotIn("minLength", triple_schema["properties"]["object"])
         user = body["messages"][1]["content"]
+        self.assertEqual(user, (
+            "Extraia as informações semânticas presentes no trecho abaixo, seguindo todas as definições e regras estabelecidas no sistema.\n\n"
+            "Para cada informação, preencha info, tokens, context e syntagm. A tripla em syntagm deve representar a mesma informação de info, "
+            "e tokens deve conter exclusivamente os IDs das palavras originais que sustentam essa informação.\n\n"
+            f"<trecho>\n{self.segment.content}\n</trecho>\n\n"
+            f"<mapeamento_tokens>\n{json.dumps(self.segment.projected_map(), ensure_ascii=False, indent=2)}\n</mapeamento_tokens>"
+        ))
         mapping = json.loads(user.split("<mapeamento_tokens>\n", 1)[1].split("\n</mapeamento_tokens>", 1)[0])
         self.assertEqual(mapping["0"], {"token": 0, "word": "Trecho"})
         self.assertNotIn("count", user)
@@ -672,6 +722,44 @@ def local_server(payload=None):
 
 
 class ExtractionPersistenceTests(unittest.TestCase):
+    def test_legacy_history_fails_before_calls_and_preserves_input_and_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.json"
+            data = mapped_dataset(2)
+            legacy = information()["informacoes"]
+            del legacy[0]["syntagm"]
+            data[0]["segments"][1]["information"] = legacy
+            path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            original = path.read_bytes()
+            output = Path(directory) / "existing.json"
+            output.write_bytes(b"previous-result")
+            provider = FakeProvider()
+            for destination in (None, output):
+                with self.subTest(destination=destination), self.assertRaisesRegex(
+                    ResponseValidationError, r"segments\[1\].information\[0\].syntagm.*formato anterior.*reextração explícita",
+                ):
+                    run_extraction(path, destination, provider=provider)
+                self.assertEqual(provider.calls, [])
+                self.assertEqual(path.read_bytes(), original)
+                self.assertEqual(output.read_bytes(), b"previous-result")
+
+    def test_empty_object_survives_save_reload_and_resume_without_aliasing_provider(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mapped.json"
+            data = map_dataset([{"segments": [{"content": "Ana dormiu."}]}])
+            path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            payload = information("Ana dormiu.", syntagm={"subject": "Ana", "relation": "dormiu", "object": ""})
+            provider = FakeProvider(payload)
+            extracted = run_extraction(path, provider=provider)
+            expected = copy.deepcopy(extracted)
+            self.assertEqual(len(provider.calls), 2)
+            self.assertEqual(extracted[0]["segments"][0]["information"], payload["informacoes"] * 2)
+            payload["informacoes"][0]["syntagm"]["relation"] = "acordou"
+            self.assertEqual(extracted, expected)
+            covered_provider = FakeProvider()
+            self.assertEqual(run_extraction(path, provider=covered_provider), expected)
+            self.assertEqual(covered_provider.calls, [])
+
     def test_in_place_save_and_separate_output(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "mapped.json"
@@ -836,10 +924,13 @@ class ExtractionPersistenceTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), original)
             segment = json.loads(output.read_text(encoding="utf-8"))[0]["segments"][0]
             self.assertEqual(segment["information"], information(tokens=[0, 1, 2])["informacoes"] * 2)
+            self.assertTrue(all(set(item["syntagm"]) == {"subject", "relation", "object"} for item in segment["information"]))
             self.assertEqual([entry["count"] for entry in segment["map"].values()], [2, 2, 2])
             self.assertEqual(len(requests), 2)
             self.assertEqual(requests[0][0], "/v1/chat/completions")
             self.assertEqual(requests[0][1]["model"], "local-test")
+            item_schema = requests[0][1]["response_format"]["json_schema"]["schema"]["properties"]["informacoes"]["items"]
+            self.assertIn("syntagm", item_schema["required"])
             self.assertEqual(coverage_state(requests[0][1]), {"generation": 1, "minimum_count": 2, "pending": [
                 {"token": token, "count": 0, "needed": 2} for token in range(3)
             ]})
@@ -848,6 +939,33 @@ class ExtractionPersistenceTests(unittest.TestCase):
             ]})
             self.assertTrue(all(request[1]["messages"][0]["content"].startswith(system_prompt() + "\n\n") for request in requests))
             self.assertEqual(requests[0][1]["messages"][-1], requests[1][1]["messages"][-1])
+
+    def test_cli_rejects_legacy_history_without_http_or_writes(self):
+        with tempfile.TemporaryDirectory() as directory, local_server() as (base_url, requests):
+            directory = Path(directory)
+            path = directory / "legacy.json"
+            data = mapped_dataset(2)
+            legacy = information()["informacoes"]
+            del legacy[0]["syntagm"]
+            data[0]["segments"][1]["information"] = legacy
+            path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            original = path.read_bytes()
+            output = directory / "result.json"
+            output.write_bytes(b"previous-result")
+            config = directory / "local.toml"
+            config.write_text(f'provider="openai-compatible"\nbase_url="{base_url}"\nreasoning_effort="omit"\napi_key_env="TEST_LOCAL_UNUSED_KEY"', encoding="utf-8")
+            completed = subprocess.run(
+                [sys.executable, "-m", "determinism", "extract", str(path), "--output", str(output), "--config", str(config), "--env-file", str(directory / "absent.env")],
+                cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False,
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertIn("syntagm é obrigatório", completed.stderr)
+            self.assertIn("formato anterior exige reextração explícita", completed.stderr)
+            self.assertEqual(requests, [])
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(output.read_bytes(), b"previous-result")
 
     def test_cli_reports_incomplete_coverage_and_saved_partial_at_configured_limit(self):
         with tempfile.TemporaryDirectory() as directory, local_server(information()) as (base_url, requests):
