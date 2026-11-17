@@ -1,4 +1,4 @@
-"""Etapa substituível: valida, reutiliza embeddings e agrupa cada segmento isolado."""
+"""Valida, agrupa e escolhe uma variante canônica por grupo de cada segmento."""
 
 import copy
 import math
@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ..domain import (
-    Dataset, EmbeddingProfile, GroupingError, Vector, cosine_matrix, member_mean,
+    Dataset, EmbeddingProfile, GroupingError, Vector, canonical_representative, cosine_matrix, member_mean,
     validate_information_dataset, validate_partition, validate_vector,
 )
 from ..ports import EmbeddingProvider, GroupingStrategy, VectorStore, VectorStoreError
@@ -61,13 +61,24 @@ class GroupingStage:
         for segment in segments:
             matrix = cosine_matrix(tuple(vectors[item.info] for item in segment.occurrences))
             partition = validate_partition(self.strategy.partition(matrix, self.threshold), matrix, self.threshold)
-            groups = [
-                [
+            groups = []
+            canonical_information = []
+            for group in sorted(partition, key=min):
+                indices = tuple(sorted(group))
+                scores = {index: member_mean(index, indices, matrix) for index in indices}
+                groups.append([
                     {"info": segment.occurrences[index].info, "context": segment.occurrences[index].context,
-                     "avg_similarity": member_mean(index, group, matrix)}
-                    for index in sorted(group)
-                ]
-                for group in sorted(partition, key=min)
-            ]
-            result[segment.source_index]["segments"][segment.segment_index]["set_different_information"] = groups
+                     "avg_similarity": scores[index]}
+                    for index in indices
+                ])
+                representative = canonical_representative(segment.occurrences, scores)
+                occurrence = segment.occurrences[representative]
+                canonical_information.append({
+                    "info": occurrence.info, "context": occurrence.context,
+                    "representative_index": representative, "member_indices": list(indices),
+                    "avg_similarity": scores[representative],
+                })
+            target = result[segment.source_index]["segments"][segment.segment_index]
+            target["set_different_information"] = groups
+            target["canonical_information"] = canonical_information
         return result

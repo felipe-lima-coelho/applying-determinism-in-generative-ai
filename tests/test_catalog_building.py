@@ -127,6 +127,9 @@ class CatalogBuildingTests(unittest.TestCase):
             {"info": APPEARANCE, "context": "aparição", "avg_similarity": 0.9},
             {"info": FIRST_APPEARANCE, "context": "primeira", "avg_similarity": 0.9},
         ]]
+        first["canonical_information"] = [{"info": APPEARANCE, "context": "aparição",
+                                           "representative_index": 0, "member_indices": [0, 1],
+                                           "avg_similarity": .9}]
         before = copy.deepcopy(dataset)
         provider = ControlledProvider({
             "s0.seg0": [candidate(APPEARANCE, original_text, [0]),
@@ -144,6 +147,7 @@ class CatalogBuildingTests(unittest.TestCase):
         self.assertEqual([item["statement"] for item in report["lost_information"]], [FIRST_APPEARANCE])
         self.assertEqual(catalog["segments"][0]["information"], first["information"])
         self.assertEqual(catalog["segments"][0]["set_different_information"], first["set_different_information"])
+        self.assertEqual(catalog["segments"][0]["segment_metadata"]["canonical_information"], first["canonical_information"])
         self.assertEqual(catalog["candidates"][0]["information_indices"], [0])
 
     def test_every_candidate_pair_and_every_segment_fact_are_assessed(self):

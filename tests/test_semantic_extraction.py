@@ -341,6 +341,7 @@ class ExtractionApplicationTests(unittest.TestCase):
         prior = information("Informação anterior.")["informacoes"]
         dataset[0]["segments"][0]["information"] = copy.deepcopy(prior * 2)
         dataset[0]["segments"][0]["set_different_information"] = [[{"info": "Agrupamento anterior."}]]
+        dataset[0]["segments"][0]["canonical_information"] = [{"info": "Representante anterior."}]
         original = copy.deepcopy(dataset)
         new = [information("Primeira geração.", [0, 1, 2]), information("Segunda geração.", [0, 1, 2])]
         provider = SequenceProvider(new)
@@ -350,6 +351,7 @@ class ExtractionApplicationTests(unittest.TestCase):
         self.assertEqual(segment["information"], new[0]["informacoes"] + new[1]["informacoes"])
         self.assertEqual([entry["count"] for entry in segment["map"].values()], [2, 2, 2])
         self.assertNotIn("set_different_information", segment)
+        self.assertNotIn("canonical_information", segment)
         self.assertEqual(dataset, original)
         already_covered_provider = FakeProvider(information("Nova execução.", [0, 1, 2]))
         second = extract_dataset(first, provider=already_covered_provider)
@@ -372,6 +374,7 @@ class ExtractionApplicationTests(unittest.TestCase):
                 data = mapped_dataset()
                 data[0]["segments"][0]["information"] = information("Extração anterior.", [0, 1, 2])["informacoes"] * 2
                 data[0]["segments"][0]["set_different_information"] = [[{"info": "Grupo anterior."}]]
+                data[0]["segments"][0]["canonical_information"] = [{"info": "Representante anterior."}]
                 original = copy.deepcopy(data)
                 provider = FakeProvider(payload)
                 with self.assertRaises(IncompleteCoverageError) as context:
@@ -385,6 +388,7 @@ class ExtractionApplicationTests(unittest.TestCase):
                 self.assertEqual(partial[0]["segments"][0]["information"], payload["informacoes"] * 3)
                 self.assertEqual(partial[0]["segments"][0]["map"]["2"]["count"], 0)
                 self.assertNotIn("set_different_information", partial[0]["segments"][0])
+                self.assertNotIn("canonical_information", partial[0]["segments"][0])
 
     def test_cap_drains_all_submitted_jobs_and_reports_unscheduled_segments(self):
         data = mapped_dataset(3)

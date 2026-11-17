@@ -1,4 +1,4 @@
-"""Composição explícita do agrupamento, independente de mapear ou extrair."""
+"""Composição do agrupamento e canonicalização, independente de mapear ou extrair."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -62,7 +62,9 @@ def run_grouping(
         import copy
         grouped = copy.deepcopy(dataset)
         for segment in segments:
-            grouped[segment.source_index]["segments"][segment.segment_index]["set_different_information"] = []
+            target = grouped[segment.source_index]["segments"][segment.segment_index]
+            target["set_different_information"] = []
+            target["canonical_information"] = []
     else:
         selected_provider = provider if provider is not None else OpenAIEmbeddingProvider(
             selected_config, read_embedding_api_key(selected_config, env_file),

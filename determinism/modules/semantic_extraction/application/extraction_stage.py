@@ -57,6 +57,7 @@ class ExtractionStage:
             target = extracted[segment.source_index]["segments"][segment.segment_index]
             target["information"] = state.information
             target.pop("set_different_information", None)
+            target.pop("canonical_information", None)
             for token, count in state.counts.items():
                 target["map"][str(token)]["count"] = count
         incomplete = [state for state in progress if not state.covered]
