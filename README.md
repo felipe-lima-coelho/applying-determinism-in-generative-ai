@@ -182,7 +182,7 @@ Em 25/10/2026, uma consulta de disponibilidade e **uma chamada de geração**, c
 
 `group` lê **cada ocorrência** de `information[*].info` em cada segmento de cada fonte e reconstrói somente `set_different_information`. Não executa mapeamento, extração nem geração de texto. `content`, `map`, `count`, `information` e todos os metadados continuam iguais. Após uma nova extração ou qualquer alteração/concatenação em `information`, execute `group` novamente para atualizar esse resultado derivado.
 
-O padrão de [semantic_grouping.toml](determinism/experiments/configs/semantic_grouping.toml) é OpenAI, `text-embedding-3-small`, limiar `0.85`, lotes de 32 textos e dimensão padrão do modelo (1536 para esse modelo). O banco é uma instância nova e exclusiva do experimento:
+O padrão de [semantic_grouping.toml](determinism/experiments/configs/semantic_grouping.toml) é OpenAI, `text-embedding-3-small`, limiar `0.90`, lotes de 32 textos e dimensão padrão do modelo (1536 para esse modelo). O banco é uma instância nova e exclusiva do experimento:
 
 ```powershell
 python -m pip install -e .
@@ -216,7 +216,7 @@ Todo o dataset é validado antes de consultar o cache ou o provedor. Cada segmen
 
 Os grupos formam uma partição: cada ocorrência original aparece exatamente uma vez, inclusive strings idênticas com contextos iguais ou diferentes. Nunca se agrupam informações de segmentos ou fontes diferentes. O cache pode compartilhar o vetor de um texto idêntico, mas a matriz de cossenos compara **todos os pares de ocorrências dentro de cada segmento**. Essa matriz é calculada uma vez e guardada em memória para as fusões, validação e descrição dos grupos. `avg_similarity` é somente uma medida descritiva: a média dos cossenos do membro com os demais membros de seu grupo, excluindo ele mesmo. Para singleton, `1.0` é uma convenção explícita, pois não há pares.
 
-A estratégia padrão é o **agrupamento hierárquico aglomerativo por complete linkage**. Cada ocorrência começa em seu próprio singleton. A similaridade entre dois grupos é o **menor cosseno entre todos os seus pares cruzados**; em cada etapa, funde-se o par de grupos com a maior dessas similaridades, desde que ela seja maior ou igual ao limiar. Assim, todo par dentro de um grupo final precisa atingir `0.85` na configuração padrão. Uma média alta nunca permite incluir um par abaixo do limiar, e `avg_similarity` não controla a participação no grupo.
+A estratégia padrão é o **agrupamento hierárquico aglomerativo por complete linkage**. Cada ocorrência começa em seu próprio singleton. A similaridade entre dois grupos é o **menor cosseno entre todos os seus pares cruzados**; em cada etapa, funde-se o par de grupos com a maior dessas similaridades, desde que ela seja maior ou igual ao limiar. Assim, todo par dentro de um grupo final precisa atingir `0.90` na configuração padrão. Uma média alta nunca permite incluir um par abaixo do limiar, e `avg_similarity` não controla a participação no grupo.
 
 O processo termina quando nenhuma fusão elegível resta. Cada fusão reduz o número de grupos em um; com `n` ocorrências, há no máximo `n - 1` fusões. Empates usam as tuplas ordenadas de índices originais; grupos e membros são apresentados em ordem de primeira ocorrência. Um validador independente verifica a partição exata, todos os pares internos e a ausência de fusões complete linkage elegíveis entre os grupos finais. A sequência hierárquica é determinística para uma mesma matriz e limiar, sem prometer o menor número possível de grupos.
 
