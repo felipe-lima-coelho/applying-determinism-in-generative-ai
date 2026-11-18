@@ -70,6 +70,7 @@ class OpenAICompatibleProvider:
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": user_message(segment)},
             ],
+            "temperature": self.config.temperature,
             "seed": self.config.seed,
             "max_completion_tokens": self.config.max_completion_tokens,
             "response_format": {
@@ -78,8 +79,6 @@ class OpenAICompatibleProvider:
             },
             "store": False,
         }
-        if self.config.temperature is not None:
-            body["temperature"] = self.config.temperature
         if self.config.reasoning_effort != "omit":
             body["reasoning_effort"] = self.config.reasoning_effort
         return body

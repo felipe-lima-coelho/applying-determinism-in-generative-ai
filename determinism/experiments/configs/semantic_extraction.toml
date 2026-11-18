@@ -1,16 +1,15 @@
 # Configuração versionada deste experimento; credenciais ficam no ambiente/.env.
 provider = "openai"
-model = "gpt-6.2-sol"
+model = "gpt-6-luna"
 base_url = "https://api.openai.com/v1"
 max_concurrency = 4
 # Salva o resultado parcial e falha se a cobertura mínima ainda não foi atingida.
 max_generations_per_segment = 20
+temperature = 0.0
 seed = 42
-# GPT-6.2 rejeita reasoning_effort='none' e temperature=0.
-# temperature fica deliberadamente ausente; a API usa seu padrão 1.
-# Para um modelo compatível, um temperature numérico é enviado sem alteração.
+# 'none' permite temperature explícita no modelo padrão.
 # Para um servidor local que não aceite o campo, selecione 'omit' explicitamente.
-reasoning_effort = "low"
+reasoning_effort = "none"
 timeout_seconds = 60.0
 max_completion_tokens = 4096
 api_key_env = "OPENAI_API_KEY"

@@ -18,12 +18,12 @@ class ConfigurationError(ValueError):
 @dataclass(frozen=True)
 class ExtractionConfig:
     provider: str = "openai"
-    model: str = "gpt-6.2-sol"
+    model: str = "gpt-6-luna"
     base_url: str = "https://api.openai.com/v1"
     max_concurrency: int = 4
-    temperature: float | None = None
+    temperature: float = 0.0
     seed: int = 42
-    reasoning_effort: str = "low"
+    reasoning_effort: str = "none"
     timeout_seconds: float = 60.0
     max_completion_tokens: int = 4096
     api_key_env: str = "OPENAI_API_KEY"
@@ -49,20 +49,14 @@ class ExtractionConfig:
             raise ConfigurationError("max_concurrency deve ser um inteiro entre 1 e 256.")
         if type(self.max_generations_per_segment) is not int or self.max_generations_per_segment < 1:
             raise ConfigurationError("max_generations_per_segment deve ser um inteiro positivo.")
-        if self.temperature is not None and (type(self.temperature) not in (int, float) or not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2):
-            raise ConfigurationError("temperature deve ser um número finito entre 0 e 2, ou None para omitir o campo.")
+        if type(self.temperature) not in (int, float) or not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2:
+            raise ConfigurationError("temperature deve ser um número finito entre 0 e 2.")
         if type(self.seed) is not int or not -(2**63) <= self.seed < 2**63:
             raise ConfigurationError("seed deve ser um inteiro de 64 bits.")
         if self.reasoning_effort not in ("none", "low", "medium", "high", "xhigh", "max", "omit"):
             raise ConfigurationError("reasoning_effort inválido; 'omit' só é permitido para um servidor compatível.")
-        if self.provider == "openai":
-            if self.model.startswith("gpt-6.2-"):
-                if self.reasoning_effort in ("none", "omit"):
-                    raise ConfigurationError("GPT-6.2 exige reasoning_effort pelo menos 'low'.")
-                if self.temperature is not None:
-                    raise ConfigurationError("GPT-6.2 exige omitir temperature; a API usa seu padrão, sem fallback.")
-            elif self.reasoning_effort == "omit" or (self.temperature is not None and self.reasoning_effort != "none"):
-                raise ConfigurationError("Neste experimento OpenAI, temperature explícita exige reasoning_effort='none'.")
+        if self.provider == "openai" and self.reasoning_effort != "none":
+            raise ConfigurationError("Este experimento OpenAI exige reasoning_effort='none' para enviar temperature explicitamente.")
         if type(self.timeout_seconds) not in (int, float) or not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
             raise ConfigurationError("timeout_seconds deve ser um número finito positivo.")
         if type(self.max_completion_tokens) is not int or self.max_completion_tokens <= 0:

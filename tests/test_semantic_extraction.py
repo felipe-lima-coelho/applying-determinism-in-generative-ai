@@ -246,7 +246,7 @@ class ExtractionApplicationTests(unittest.TestCase):
         self.assertTrue(all(call.coverage.pending == ((0, 0), (1, 0), (2, 0)) for call in provider.calls))
         bodies = [OpenAICompatibleProvider(ExtractionConfig(), "test-credential").build_request_body(call) for call in provider.calls]
         self.assertEqual(len({body["messages"][0]["content"] for body in bodies}), 3)
-        self.assertTrue(all("temperature" not in body and body["seed"] == 42 and body["reasoning_effort"] == "low" for body in bodies))
+        self.assertTrue(all(body["temperature"] == 0 and body["seed"] == 42 for body in bodies))
 
     def test_bounded_generations_stop_independently_with_out_of_order_sources(self):
         dataset = mapped_dataset(4)
@@ -508,7 +508,7 @@ class ExtractionAdapterTests(unittest.TestCase):
         self.segment = validate_mapped_dataset(mapped_dataset())[0]
 
     def test_exact_prompt_and_schema_separation_and_parameter_propagation(self):
-        config = ExtractionConfig(model="gpt-6-luna", reasoning_effort="none", seed=198, temperature=0.25, max_completion_tokens=900, timeout_seconds=7)
+        config = ExtractionConfig(seed=198, temperature=0.25, max_completion_tokens=900, timeout_seconds=7)
         body = OpenAICompatibleProvider(config, "test-credential").build_request_body(self.segment)
         self.assertEqual(body["model"], "gpt-6-luna")
         self.assertEqual((body["seed"], body["temperature"], body["reasoning_effort"], body["max_completion_tokens"]), (198, 0.25, "none", 900))
@@ -589,7 +589,7 @@ class ExtractionAdapterTests(unittest.TestCase):
         self.assertEqual(user.count("</mapeamento_tokens>"), 1)
 
     def test_transport_endpoint_headers_timeout_and_no_retry(self):
-        config = ExtractionConfig(provider="openai-compatible", base_url="http://localhost:1234/v1/", reasoning_effort="omit", temperature=0, timeout_seconds=3)
+        config = ExtractionConfig(provider="openai-compatible", base_url="http://localhost:1234/v1/", reasoning_effort="omit", timeout_seconds=3)
         provider = OpenAICompatibleProvider(config, "test-credential")
         captured = []
 
@@ -657,26 +657,6 @@ class ExtractionAdapterTests(unittest.TestCase):
 
 
 class ExtractionConfigurationTests(unittest.TestCase):
-    def test_sol_defaults_omit_temperature_and_preserve_seed_schema_and_prompt(self):
-        config = load_extraction_config()
-        self.assertEqual((config.model, config.reasoning_effort, config.temperature, config.seed), ("gpt-6.2-sol", "low", None, 42))
-        segment = validate_mapped_dataset(mapped_dataset())[0]
-        body = OpenAICompatibleProvider(config, "test-credential").build_request_body(segment)
-        self.assertNotIn("temperature", body)
-        self.assertEqual((body["model"], body["reasoning_effort"], body["seed"]), ("gpt-6.2-sol", "low", 42))
-        luna = OpenAICompatibleProvider(replace(config, model="gpt-6-luna", reasoning_effort="none", temperature=0.0), "test-credential").build_request_body(segment)
-        self.assertEqual(luna["temperature"], 0.0)
-        self.assertEqual(luna["reasoning_effort"], "none")
-        self.assertEqual({key: value for key, value in body.items() if key not in ("model", "reasoning_effort")},
-                         {key: value for key, value in luna.items() if key not in ("model", "reasoning_effort", "temperature")})
-
-    def test_explicit_legacy_luna_toml_keeps_original_sampling_parameters(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "luna.toml"
-            path.write_text('model="gpt-6-luna"\ntemperature=0.0\nreasoning_effort="none"\nseed=42', encoding="utf-8")
-            config = load_extraction_config(path)
-            self.assertEqual((config.model, config.temperature, config.reasoning_effort, config.seed), ("gpt-6-luna", 0.0, "none", 42))
-
     def test_packaged_defaults_and_explicit_toml_overrides(self):
         # O TOML versionado usa 20; o fallback da API em memória continua 10.
         self.assertEqual(load_extraction_config(), replace(ExtractionConfig(), max_generations_per_segment=20))
@@ -714,8 +694,7 @@ class ExtractionConfigurationTests(unittest.TestCase):
             {"max_generations_per_segment": True}, {"max_generations_per_segment": 0},
             {"max_generations_per_segment": -1}, {"max_generations_per_segment": 1.5},
             {"temperature": float("nan")}, {"temperature": 3}, {"seed": True}, {"seed": 2**64},
-            {"reasoning_effort": "omit"}, {"reasoning_effort": "none"}, {"temperature": 0},
-            {"model": "gpt-6-luna", "reasoning_effort": "high", "temperature": 0}, {"timeout_seconds": 0},
+            {"reasoning_effort": "omit"}, {"reasoning_effort": "high"}, {"timeout_seconds": 0},
             {"timeout_seconds": float("inf")}, {"max_completion_tokens": 0}, {"api_key_env": "sk-invalid-format"},
         ]
         for overrides in invalid:

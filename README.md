@@ -94,13 +94,13 @@ A configuração versionada está em [`determinism/experiments/configs/semantic_
 | Campo | Padrão | Uso |
 | --- | --- | --- |
 | `provider` | `openai` | `openai` ou `openai-compatible` |
-| `model` | `gpt-6.2-sol` | Identificador exato, sem substituição automática |
+| `model` | `gpt-6-luna` | Identificador exato, sem substituição automática |
 | `base_url` | `https://api.openai.com/v1` | Endpoint base de Chat Completions |
 | `max_concurrency` | `4` | Limite de chamadas e tarefas pendentes (1 a 256) |
 | `max_generations_per_segment` | `20` | Limite de novas gerações por segmento nesta execução; cobertura incompleta causa erro |
-| `temperature` | omitido | Ausente no TOML e na requisição; a API do GPT-6.2 usa o padrão `1` |
+| `temperature` | `0.0` | Temperatura enviada explicitamente |
 | `seed` | `42` | Semente inteira fixa enviada explicitamente |
-| `reasoning_effort` | `low` | Menor esforço aceito pelo modelo padrão |
+| `reasoning_effort` | `none` | Permite temperatura explícita no modelo padrão |
 | `timeout_seconds` | `60.0` | Timeout de transporte por chamada |
 | `max_completion_tokens` | `4096` | Limite de saída por geração |
 | `api_key_env` | `OPENAI_API_KEY` | Nome da variável que contém a credencial |
@@ -148,7 +148,7 @@ max_completion_tokens = 4096
 api_key_env = "LOCAL_AI_API_KEY"
 ```
 
-Execute com `--config <arquivo.toml>`. A credencial é opcional nesse provedor. `reasoning_effort = "omit"` omite **somente esse campo por escolha explícita**, para servidores que não o aceitam. `temperature`, quando numérico, é enviado sem alteração; quando ausente no TOML (`None` na API Python), não é enviado. O servidor precisa oferecer `/chat/completions` e aceitar os parâmetros configurados, `seed`, `max_completion_tokens`, `store = false` e Structured Outputs estrito; essa compatibilidade depende do servidor e do modelo. Os parâmetros exigidos não são descartados automaticamente. Configurações explícitas do Luna com `temperature = 0.0` e `reasoning_effort = "none"` continuam enviando esses mesmos valores. A porta `InferenceProvider` permite implementar outros provedores, inclusive locais sem HTTP, sem modificar o domínio ou a aplicação:
+Execute com `--config <arquivo.toml>`. A credencial é opcional nesse provedor. `reasoning_effort = "omit"` omite **somente esse campo por escolha explícita**, para servidores que não o aceitam. O servidor precisa oferecer `/chat/completions` e aceitar `temperature`, `seed`, `max_completion_tokens`, `store = false` e Structured Outputs estrito; essa compatibilidade depende do servidor e do modelo. Os parâmetros exigidos não são descartados automaticamente. A porta `InferenceProvider` permite implementar outros provedores, inclusive locais sem HTTP, sem modificar o domínio ou a aplicação:
 
 ```python
 from determinism.experiments import extract_dataset, map_dataset
@@ -174,7 +174,7 @@ Implementações dessa porta devem ser seguras para chamadas simultâneas e pode
 
 ### Reprodutibilidade e verificação da API
 
-Temperatura zero e semente fixa não garantem determinismo. A documentação oficial descreve `seed` como parâmetro depreciado de melhor esforço; diferenças de infraestrutura e do modelo ainda podem mudar a saída. O adaptador usa Chat Completions e preserva `seed`. O padrão atual `gpt-6.2-sol` exige `reasoning_effort = "low"` e omissão de `temperature`; a API usa sua temperatura padrão `1`. Em 18/11/2026, três sondagens reais confirmaram a rejeição de `none`, depois de temperatura `0`, e a aceitação de `low` com temperatura omitida e seed `42`. Essas diferenças devem acompanhar qualquer comparação com os experimentos históricos do Luna, que usaram `none` e temperatura `0`: a comparação não isola somente a troca de modelo. Consulte as fontes oficiais: [modelo](https://developers.openai.com/api/docs/models/gpt-6.2-sol), [parâmetros de GPT-6.2](https://developers.openai.com/api/docs/guides/latest-model), [Chat Completions e seed](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat) e [limites de reprodutibilidade](https://developers.openai.com/cookbook/examples/reproducible_outputs_with_the_seed_parameter).
+Temperatura zero e semente fixa não garantem determinismo. A documentação oficial descreve `seed` como parâmetro depreciado de melhor esforço; diferenças de infraestrutura e do modelo ainda podem mudar a saída. O adaptador usa Chat Completions, preserva `seed` e usa `reasoning_effort = "none"` para permitir `temperature` no GPT-6 Luna. Consulte as fontes oficiais: [modelo](https://developers.openai.com/api/docs/models/gpt-6-luna), [parâmetros de GPT-6](https://developers.openai.com/api/docs/guides/latest-model), [Chat Completions e seed](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat) e [limites de reprodutibilidade](https://developers.openai.com/cookbook/examples/reproducible_outputs_with_the_seed_parameter).
 
 Em 25/10/2026, uma consulta de disponibilidade e **uma chamada de geração**, com o segmento atual de 21 palavras, confirmaram acesso a `gpt-6-luna` e aceitação do JSON Schema, temperatura `0`, semente `42` e reasoning `none`. A resposta informou modelo `gpt-6-luna`, sem `system_fingerprint`, e gerou as três informações presentes no dataset. O conteúdo, mapa, contagens e demais metadados foram comparados antes/depois e preservados. Foi uma verificação de integração e estrutura JSON; não houve benchmark nem repetição para medir determinismo. Para comparações futuras, registre versão do código, configuração, dataset, modelo retornado e `system_fingerprint` quando disponível em `InferenceResult`; o experimento padrão não cria um registro automático.
 
