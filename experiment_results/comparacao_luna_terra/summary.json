@@ -1,0 +1,2305 @@
+{
+  "schema_version": 1,
+  "cohorts": {
+    "gpt-6-luna": {
+      "root": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_20261117",
+      "configuration": {
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-6-luna",
+          "base_url": "https://api.openai.com/v1",
+          "max_concurrency": 4,
+          "temperature": 0.0,
+          "seed": 42,
+          "reasoning_effort": "none",
+          "timeout_seconds": 60.0,
+          "max_completion_tokens": 4096,
+          "api_key_env": "OPENAI_API_KEY",
+          "max_generations_per_segment": 20
+        },
+        "grouping": {
+          "provider": "openai",
+          "model": "text-embedding-3-small",
+          "base_url": "https://api.openai.com/v1",
+          "threshold": 0.85,
+          "dimensions": null,
+          "batch_size": 32,
+          "timeout_seconds": 60.0,
+          "api_key_env": "OPENAI_API_KEY",
+          "cache_revision": "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+        }
+      },
+      "audit": {
+        "accepted_runs": 100,
+        "effective_model_appearances": {
+          "gpt-6-luna": 100,
+          "text-embedding-3-small": 100
+        },
+        "system_fingerprint_appearances": {},
+        "runs_without_system_fingerprint": 100,
+        "all_attempts": 100,
+        "attempt_status_counts": {
+          "completed": 100
+        },
+        "retry_attempts_after_first": 0
+      },
+      "input_sha256": "a549ec7c674c2a86e7879dee29b02d3ec969a0f7445f24b26ffe955d57f7f787",
+      "code_sha256": "d3f7b784248f9bca9f20330c147492cc18e7dadd744c831ddb3a7c169251cb0e",
+      "global_canonical_count": {
+        "n": 100,
+        "mean": 15.33,
+        "sample_variance_ddof1": 2.4859595959595957,
+        "sample_standard_deviation": 1.576692613022461,
+        "min": 13,
+        "max": 21,
+        "range": 8
+      },
+      "exact_raw_text_across_runs": {
+        "comparison": "literal raw string equality; occurrences are a multiset",
+        "multiset_intersection_count": 3,
+        "multiset_union_count": 106,
+        "intersection_distinct_text_count": 3,
+        "union_distinct_text_count": 106,
+        "run_frequency_distribution": [
+          {
+            "runs_present": 1,
+            "distinct_texts": 32
+          },
+          {
+            "runs_present": 2,
+            "distinct_texts": 10
+          },
+          {
+            "runs_present": 3,
+            "distinct_texts": 9
+          },
+          {
+            "runs_present": 4,
+            "distinct_texts": 6
+          },
+          {
+            "runs_present": 5,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 6,
+            "distinct_texts": 4
+          },
+          {
+            "runs_present": 7,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 8,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 9,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 10,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 11,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 12,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 13,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 14,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 15,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 16,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 17,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 18,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 19,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 20,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 21,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 22,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 23,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 24,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 25,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 26,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 27,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 28,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 29,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 30,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 31,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 32,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 33,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 34,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 35,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 36,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 37,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 38,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 39,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 40,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 41,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 42,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 43,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 44,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 45,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 46,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 47,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 48,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 49,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 50,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 51,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 52,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 53,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 54,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 55,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 56,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 57,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 58,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 59,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 60,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 61,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 62,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 63,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 64,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 65,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 66,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 67,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 68,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 69,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 70,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 71,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 72,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 73,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 74,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 75,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 76,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 77,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 78,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 79,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 80,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 81,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 82,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 83,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 84,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 85,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 86,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 87,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 88,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 89,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 90,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 91,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 92,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 93,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 94,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 95,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 96,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 97,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 98,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 99,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 100,
+            "distinct_texts": 3
+          }
+        ],
+        "items": [
+          {
+            "info": "A Duquesa de Sussex apareceu rapidamente no Castelo de Windsor.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A Duquesa de Sussex disse, durante uma rápida aparição no Castelo de Windsor, que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 11,
+            "total_occurrences": 11
+          },
+          {
+            "info": "A Duquesa de Sussex disse, durante uma rápida aparição no Castelo de Windsor, que o bebê é muito calmo e tem temperamento doce.",
+            "runs_present": 10,
+            "total_occurrences": 10
+          },
+          {
+            "info": "A Duquesa de Sussex fez uma rápida aparição no Castelo de Windsor.",
+            "runs_present": 61,
+            "total_occurrences": 61
+          },
+          {
+            "info": "A afirmação de que Meghan tem os dois melhores caras do mundo e está muito feliz é completada por Meghan.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A apresentação do bebê ao mundo ocorreu hoje.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A apresentação do bebê real ao mundo ocorreu hoje.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A divulgação do nome pelo casal ocorreu horas depois.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje o mais novo integrante da família real.",
+            "runs_present": 100,
+            "total_occurrences": 100
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram o bebê ao mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A esposa de Harry é Meghan.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A esposa do príncipe Harry ganhou palavras carinhosas dele.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A mulher (a esposa) elogiou o príncipe Harry antes de ele receber palavras carinhosas dela.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Antes de Harry ganhar palavras carinhosas da esposa, a mulher se derreteu em elogios.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Antes de Harry ganhar palavras carinhosas da esposa, ele havia se derretido em elogios à mulher.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "Antes de Harry receber palavras carinhosas da esposa, alguém se derreteu em elogios à mulher.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "Antes de Harry receber palavras carinhosas da esposa, ele havia se derretido em elogios à mulher.",
+            "runs_present": 13,
+            "total_occurrences": 13
+          },
+          {
+            "info": "Antes de Harry receber palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+            "runs_present": 30,
+            "total_occurrences": 30
+          },
+          {
+            "info": "Antes de o príncipe Harry ganhar palavras carinhosas da esposa, ele se derreteu em elogios à mulher.",
+            "runs_present": 11,
+            "total_occurrences": 11
+          },
+          {
+            "info": "Antes disso, o príncipe Harry se derreteu em elogios à mulher.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Antes, alguém se derreteu em elogios à mulher.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Antes, o príncipe Harry se derreteu em elogios à mulher.",
+            "runs_present": 8,
+            "total_occurrences": 8
+          },
+          {
+            "info": "Depois de se derreter em elogios à mulher, o príncipe Harry ganhou palavras carinhosas da esposa.",
+            "runs_present": 14,
+            "total_occurrences": 14
+          },
+          {
+            "info": "Depois disso, foi a vez de o príncipe Harry ganhar palavras carinhosas da esposa.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "Depois dos elogios de Harry à mulher, chegou a vez de o príncipe Harry ganhar palavras carinhosas da esposa.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Foi a vez de o príncipe Harry ganhar palavras carinhosas da esposa.",
+            "runs_present": 10,
+            "total_occurrences": 10
+          },
+          {
+            "info": "Harry ganhou palavras carinhosas da esposa.",
+            "runs_present": 39,
+            "total_occurrences": 39
+          },
+          {
+            "info": "Harry recebeu palavras carinhosas da esposa.",
+            "runs_present": 11,
+            "total_occurrences": 11
+          },
+          {
+            "info": "Horas depois, o casal divulgou o nome completo do bebê real: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 33,
+            "total_occurrences": 33
+          },
+          {
+            "info": "Horas depois, o casal divulgou que o nome completo do bebê real é Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Horas depois, o casal divulgou que o nome do bebê real é Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 62,
+            "total_occurrences": 62
+          },
+          {
+            "info": "Meghan afirma que está muito feliz.",
+            "runs_present": 8,
+            "total_occurrences": 8
+          },
+          {
+            "info": "Meghan afirma que tem os dois melhores caras do mundo.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Meghan completa que está muito feliz.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan completa que tem os dois melhores caras do mundo.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Meghan disse que está muito feliz.",
+            "runs_present": 55,
+            "total_occurrences": 55
+          },
+          {
+            "info": "Meghan disse que tem os dois melhores caras do mundo e que está muito feliz.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Meghan disse que tem os dois melhores caras do mundo.",
+            "runs_present": 42,
+            "total_occurrences": 42
+          },
+          {
+            "info": "Meghan diz que está muito feliz.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "Meghan diz que tem os dois melhores caras do mundo.",
+            "runs_present": 36,
+            "total_occurrences": 36
+          },
+          {
+            "info": "Meghan elogiou a mulher antes de o príncipe Harry receber palavras carinhosas da esposa.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "Meghan elogiou a mulher antes de o príncipe Harry receber palavras carinhosas de sua esposa.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan está muito feliz.",
+            "runs_present": 29,
+            "total_occurrences": 29
+          },
+          {
+            "info": "Meghan se derreteu em elogios à mulher antes de o príncipe Harry ganhar palavras carinhosas da esposa.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "Meghan tem os dois melhores caras do mundo.",
+            "runs_present": 14,
+            "total_occurrences": 14
+          },
+          {
+            "info": "Meghan é a esposa do príncipe Harry.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Na aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Na aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 53,
+            "total_occurrences": 53
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+            "runs_present": 23,
+            "total_occurrences": 23
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo, com temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público com o filho pela primeira vez.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram em público pela primeira vez com o filho.",
+            "runs_present": 45,
+            "total_occurrences": 45
+          },
+          {
+            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram juntos em público com o filho pela primeira vez.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O Príncipe Harry e a Duquesa Meghan Markle apareceram juntos em público pela primeira vez com o filho.",
+            "runs_present": 9,
+            "total_occurrences": 9
+          },
+          {
+            "info": "O bebê puxou a quem o príncipe não sabe identificar.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O bebê real estava sorridente quando foi apresentado ao mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O bebê real estava sorridente quando foi apresentado.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O bebê real foi apresentado sorridente.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O bebê real recebeu o nome de Archie Harrison.",
+            "runs_present": 100,
+            "total_occurrences": 100
+          },
+          {
+            "info": "O bebê tem temperamento doce.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "O bebê é muito calmo.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "O casal divulgou o nome do bebê real horas depois.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O filho de Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição em público.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O filho de Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição pública mencionada.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O filho de Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição pública.",
+            "runs_present": 19,
+            "total_occurrences": 19
+          },
+          {
+            "info": "O filho de Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+            "runs_present": 55,
+            "total_occurrences": 55
+          },
+          {
+            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição em público.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição pública mencionada.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu dois dias antes da aparição pública.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "O filho do Príncipe Harry e da Duquesa Meghan Markle nasceu há dois dias.",
+            "runs_present": 12,
+            "total_occurrences": 12
+          },
+          {
+            "info": "O filho nasceu dois dias antes da aparição pública do Príncipe Harry e da Duquesa Meghan Markle.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O integrante apresentado por Meghan Markle e Harry é o mais novo bebê real.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O mais novo bebê real estava sorridente quando foi apresentado ao mundo.",
+            "runs_present": 14,
+            "total_occurrences": 14
+          },
+          {
+            "info": "O mais novo bebê real estava sorridente quando foi apresentado.",
+            "runs_present": 12,
+            "total_occurrences": 12
+          },
+          {
+            "info": "O mais novo bebê real estava sorridente.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O mais novo bebê real foi apresentado ao mundo no colo do pai.",
+            "runs_present": 62,
+            "total_occurrences": 62
+          },
+          {
+            "info": "O mais novo bebê real foi apresentado ao mundo.",
+            "runs_present": 29,
+            "total_occurrences": 29
+          },
+          {
+            "info": "O mais novo integrante apresentado por Meghan Markle e Harry é o mais novo bebê real.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O pai do bebê estava sorridente durante a apresentação ao mundo.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "O pai do bebê estava sorridente durante a apresentação do bebê ao mundo.",
+            "runs_present": 12,
+            "total_occurrences": 12
+          },
+          {
+            "info": "O pai do bebê estava sorridente durante a apresentação.",
+            "runs_present": 34,
+            "total_occurrences": 34
+          },
+          {
+            "info": "O pai do bebê estava sorridente quando o bebê foi apresentado ao mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O pai do bebê estava sorridente.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente durante a apresentação ao mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente durante a apresentação do bebê ao mundo.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente durante a apresentação.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do bebê ao mundo no colo dele.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do bebê ao mundo.",
+            "runs_present": 15,
+            "total_occurrences": 15
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do bebê real ao mundo.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do bebê real.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do bebê.",
+            "runs_present": 9,
+            "total_occurrences": 9
+          },
+          {
+            "info": "O pai estava sorridente durante a apresentação do mais novo bebê real.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O pai estava sorridente.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe Harry ganhou palavras carinhosas da esposa.",
+            "runs_present": 19,
+            "total_occurrences": 19
+          },
+          {
+            "info": "O príncipe Harry recebeu palavras carinhosas da esposa depois de se derreter em elogios à mulher.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe Harry se derreteu em elogios à mulher antes de ganhar palavras carinhosas da esposa.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe Harry se derreteu em elogios à mulher.",
+            "runs_present": 31,
+            "total_occurrences": 31
+          },
+          {
+            "info": "O príncipe brincou e disse que não sabe a quem ele puxou.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe brincou.",
+            "runs_present": 100,
+            "total_occurrences": 100
+          },
+          {
+            "info": "O príncipe disse que não sabe a quem ele puxou.",
+            "runs_present": 55,
+            "total_occurrences": 55
+          },
+          {
+            "info": "O príncipe disse que não sabe a quem o bebê puxou.",
+            "runs_present": 45,
+            "total_occurrences": 45
+          },
+          {
+            "info": "Príncipe Harry e a Duquesa Meghan Markle apareceram em público pela primeira vez com o filho.",
+            "runs_present": 41,
+            "total_occurrences": 41
+          },
+          {
+            "info": "Príncipe Harry e a Duquesa Meghan Markle apareceram juntos em público pela primeira vez com o filho.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          }
+        ]
+      },
+      "within_model_pairs": {
+        "pair_count": 4950,
+        "exact": {
+          "pair_count": 4950,
+          "mean_matched": 7.257171717171717,
+          "mean_total_unmatched": 16.145656565656566,
+          "mean_jaccard": 0.3163784707527644,
+          "min_jaccard": 0.0967741935483871,
+          "max_jaccard": 0.7647058823529411,
+          "identical_pair_count": 0,
+          "mean_matched_fraction_per_catalog": 0.47526142530309196,
+          "mean_unmatched_fraction_per_catalog": 0.5247385746969081,
+          "complete_match_rate": 0.0
+        },
+        "semantic": {
+          "pair_count": 4950,
+          "mean_matched": 13.545454545454545,
+          "mean_total_unmatched": 3.569090909090909,
+          "mean_jaccard": 0.7986191265175512,
+          "min_jaccard": 0.45454545454545453,
+          "max_jaccard": 1.0,
+          "identical_pair_count": 126,
+          "mean_matched_fraction_per_catalog": 0.8890593272921705,
+          "mean_unmatched_fraction_per_catalog": 0.11094067270782958,
+          "complete_match_rate": 0.025454545454545455
+        },
+        "total_unmatched_definition": "unmatched_a + unmatched_b = n_a + n_b - 2 * matched",
+        "fraction_definition": "Mean of per-catalog matched/count and unmatched/count across the two catalogs in each pair; empty catalogs are omitted from these fractions."
+      }
+    },
+    "gpt-6.1-terra": {
+      "root": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_gpt61terra_20261118",
+      "configuration": {
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-6.1-terra",
+          "base_url": "https://api.openai.com/v1",
+          "max_concurrency": 4,
+          "temperature": 0.0,
+          "seed": 42,
+          "reasoning_effort": "none",
+          "timeout_seconds": 60.0,
+          "max_completion_tokens": 4096,
+          "api_key_env": "OPENAI_API_KEY",
+          "max_generations_per_segment": 20
+        },
+        "grouping": {
+          "provider": "openai",
+          "model": "text-embedding-3-small",
+          "base_url": "https://api.openai.com/v1",
+          "threshold": 0.85,
+          "dimensions": null,
+          "batch_size": 32,
+          "timeout_seconds": 60.0,
+          "api_key_env": "OPENAI_API_KEY",
+          "cache_revision": "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+        }
+      },
+      "audit": {
+        "accepted_runs": 100,
+        "effective_model_appearances": {
+          "gpt-6.1-terra": 100,
+          "text-embedding-3-small": 100
+        },
+        "system_fingerprint_appearances": {},
+        "runs_without_system_fingerprint": 100,
+        "all_attempts": 100,
+        "attempt_status_counts": {
+          "completed": 100
+        },
+        "retry_attempts_after_first": 0
+      },
+      "input_sha256": "a549ec7c674c2a86e7879dee29b02d3ec969a0f7445f24b26ffe955d57f7f787",
+      "code_sha256": "aecca1e4857da5e0f46db5ce48c3bf30cb895e43f3bc48bbf7f1ebfe99ec6c62",
+      "global_canonical_count": {
+        "n": 100,
+        "mean": 11.41,
+        "sample_variance_ddof1": 0.7897979797979797,
+        "sample_standard_deviation": 0.8887057892227211,
+        "min": 9,
+        "max": 14,
+        "range": 5
+      },
+      "exact_raw_text_across_runs": {
+        "comparison": "literal raw string equality; occurrences are a multiset",
+        "multiset_intersection_count": 1,
+        "multiset_union_count": 103,
+        "intersection_distinct_text_count": 1,
+        "union_distinct_text_count": 103,
+        "run_frequency_distribution": [
+          {
+            "runs_present": 1,
+            "distinct_texts": 27
+          },
+          {
+            "runs_present": 2,
+            "distinct_texts": 18
+          },
+          {
+            "runs_present": 3,
+            "distinct_texts": 9
+          },
+          {
+            "runs_present": 4,
+            "distinct_texts": 4
+          },
+          {
+            "runs_present": 5,
+            "distinct_texts": 7
+          },
+          {
+            "runs_present": 6,
+            "distinct_texts": 6
+          },
+          {
+            "runs_present": 7,
+            "distinct_texts": 4
+          },
+          {
+            "runs_present": 8,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 9,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 10,
+            "distinct_texts": 3
+          },
+          {
+            "runs_present": 11,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 12,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 13,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 14,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 15,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 16,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 17,
+            "distinct_texts": 2
+          },
+          {
+            "runs_present": 18,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 19,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 20,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 21,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 22,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 23,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 24,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 25,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 26,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 27,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 28,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 29,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 30,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 31,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 32,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 33,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 34,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 35,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 36,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 37,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 38,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 39,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 40,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 41,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 42,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 43,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 44,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 45,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 46,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 47,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 48,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 49,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 50,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 51,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 52,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 53,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 54,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 55,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 56,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 57,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 58,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 59,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 60,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 61,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 62,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 63,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 64,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 65,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 66,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 67,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 68,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 69,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 70,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 71,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 72,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 73,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 74,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 75,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 76,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 77,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 78,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 79,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 80,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 81,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 82,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 83,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 84,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 85,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 86,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 87,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 88,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 89,
+            "distinct_texts": 1
+          },
+          {
+            "runs_present": 90,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 91,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 92,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 93,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 94,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 95,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 96,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 97,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 98,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 99,
+            "distinct_texts": 0
+          },
+          {
+            "runs_present": 100,
+            "distinct_texts": 1
+          }
+        ],
+        "items": [
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da aparição no Castelo de Windsor e das declarações sobre o bebê.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da aparição no Castelo de Windsor, durante a qual a duquesa falou sobre o bebê e o príncipe brincou sobre a quem ele puxou.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da aparição no Castelo de Windsor, durante a qual a duquesa falou sobre o bebê.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da aparição no Castelo de Windsor.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da rápida aparição no Castelo de Windsor, durante a qual a Duquesa de Sussex falou sobre o bebê.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da rápida aparição no Castelo de Windsor, durante a qual a duquesa falou sobre o bebê e o príncipe brincou.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da rápida aparição no Castelo de Windsor, durante a qual a duquesa falou sobre o bebê.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois da rápida aparição no Castelo de Windsor.",
+            "runs_present": 7,
+            "total_occurrences": 7
+          },
+          {
+            "info": "A divulgação do nome do bebê real pelo casal ocorreu horas depois das declarações da Duquesa de Sussex e do príncipe.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, no colo do pai, descrito como sorridente.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, no colo do pai, que estava sorridente.",
+            "runs_present": 64,
+            "total_occurrences": 64
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, no colo do pai, sorridente.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, no colo do pai.",
+            "runs_present": 14,
+            "total_occurrences": 14
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, que estava no colo do pai, sorridente.",
+            "runs_present": 7,
+            "total_occurrences": 7
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo bebê da família real, que estava no colo do pai.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo integrante da família real, no colo do pai, que estava sorridente.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo integrante da família real, no colo do pai.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo integrante da família real, um bebê, no colo do pai, que estava sorridente.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "A duquesa Meghan Markle e o príncipe Harry apresentaram hoje ao mundo o mais novo integrante da família real, um bebê, no colo do pai, sorridente.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A esposa do príncipe Harry dirigiu palavras carinhosas a ele.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A esposa do príncipe Harry dirigiu-lhe palavras carinhosas depois de ele fazer muitos elogios à mulher.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "A esposa do príncipe Harry dirigiu-lhe palavras carinhosas.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Depois de o príncipe Harry se derreter em elogios à mulher, ele recebeu palavras carinhosas da esposa.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Depois de se derreter em elogios à mulher, o príncipe Harry recebeu palavras carinhosas da esposa.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Durante a rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 59,
+            "total_occurrences": 59
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê real era muito calmo e tinha temperamento doce.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê real era muito calmo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê real tem temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê real tinha temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê real é muito calmo e tem temperamento doce.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "Durante uma rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê é muito calmo e tem temperamento doce.",
+            "runs_present": 17,
+            "total_occurrences": 17
+          },
+          {
+            "info": "Horas depois da aparição no Castelo de Windsor, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 51,
+            "total_occurrences": 51
+          },
+          {
+            "info": "Horas depois da aparição no Castelo de Windsor, o casal divulgou que o nome do bebê real era Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 10,
+            "total_occurrences": 10
+          },
+          {
+            "info": "Horas depois da aparição no Castelo de Windsor, o casal divulgou que o nome do bebê real é Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Horas depois da brincadeira do príncipe sobre a quem o bebê real puxou, o casal divulgou o nome do bebê: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Horas depois da brincadeira do príncipe sobre não saber a quem o bebê real puxou, o casal divulgou o nome do bebê: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Horas depois da brincadeira em que o príncipe disse não saber a quem o bebê real puxou, o casal divulgou o nome do bebê: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Horas depois da rápida aparição no Castelo de Windsor, o casal divulgou o nome do bebê real, Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Horas depois da rápida aparição no Castelo de Windsor, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "Horas depois da rápida aparição no Castelo de Windsor, o casal divulgou que o nome do bebê real era Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Horas depois, o casal divulgou o nome do bebê real: Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Horas depois, o casal divulgou que o nome do bebê real era Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 11,
+            "total_occurrences": 11
+          },
+          {
+            "info": "Meghan afirma que está muito feliz.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Meghan afirma que tem os dois melhores caras do mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Meghan completa dizendo que está muito feliz.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "Meghan completa dizendo que tem os dois melhores caras do mundo e está muito feliz.",
+            "runs_present": 12,
+            "total_occurrences": 12
+          },
+          {
+            "info": "Meghan completa dizendo que tem os dois melhores caras do mundo e que está muito feliz.",
+            "runs_present": 10,
+            "total_occurrences": 10
+          },
+          {
+            "info": "Meghan completa dizendo que tem os dois melhores caras do mundo.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Meghan completa dizendo: \"Tem os dois melhores caras do mundo\".",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Meghan completa dizendo: \"Tem os dois melhores caras do mundo, estou muito feliz\".",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan completa dizendo: «Tem os dois melhores caras do mundo, estou muito feliz».",
+            "runs_present": 38,
+            "total_occurrences": 38
+          },
+          {
+            "info": "Meghan completa dizendo: «Tem os dois melhores caras do mundo».",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan completa dizendo: “Tem os dois melhores caras do mundo, estou muito feliz”.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Meghan completa: «Tem os dois melhores caras do mundo, estou muito feliz».",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan completou dizendo que estava muito feliz.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan completou dizendo que está muito feliz.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "Meghan completou dizendo que tem os dois melhores caras do mundo e que está muito feliz.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Meghan completou dizendo: \"Tem os dois melhores caras do mundo, estou muito feliz\".",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "Meghan completou dizendo: «Tem os dois melhores caras do mundo, estou muito feliz».",
+            "runs_present": 11,
+            "total_occurrences": 11
+          },
+          {
+            "info": "Meghan completou: «Tem os dois melhores caras do mundo, estou muito feliz».",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "Meghan completou: “Tem os dois melhores caras do mundo, estou muito feliz”.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "Meghan disse que estava muito feliz.",
+            "runs_present": 20,
+            "total_occurrences": 20
+          },
+          {
+            "info": "Meghan disse que está muito feliz.",
+            "runs_present": 66,
+            "total_occurrences": 66
+          },
+          {
+            "info": "Meghan disse que tem os dois melhores caras do mundo.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo e tinha temperamento doce.",
+            "runs_present": 9,
+            "total_occurrences": 9
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê era muito calmo, com temperamento doce.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "Na rápida aparição no Castelo de Windsor, a Duquesa de Sussex disse que o bebê tinha temperamento doce.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O bebê real recebeu o nome de Archie Harrison Mountbatten-Windsor.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "O bebê real recebeu o nome de Archie Harrison.",
+            "runs_present": 88,
+            "total_occurrences": 88
+          },
+          {
+            "info": "O casal divulgou o nome do bebê real horas depois da rápida aparição no Castelo de Windsor, durante a qual a duquesa falou sobre o bebê.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O casal divulgou o nome do bebê real horas depois da rápida aparição no Castelo de Windsor.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O casal divulgou o nome do bebê real, Archie Harrison Mountbatten-Windsor, horas depois da rápida aparição no Castelo de Windsor.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "O filho do príncipe Harry e da duquesa Meghan Markle nasceu há dois dias.",
+            "runs_present": 100,
+            "total_occurrences": 100
+          },
+          {
+            "info": "O mais novo bebê da família real estava no colo do pai durante sua apresentação ao mundo.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "O mais novo bebê da família real estava no colo do pai quando foi apresentado ao mundo.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "O mais novo bebê real estava no colo do pai durante sua apresentação ao mundo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O mais novo bebê real estava no colo do pai quando foi apresentado ao mundo.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "O mais novo bebê real foi apresentado ao mundo no colo do pai, que estava sorridente.",
+            "runs_present": 17,
+            "total_occurrences": 17
+          },
+          {
+            "info": "O mais novo bebê real foi apresentado ao mundo no colo do pai, sorridente.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O mais novo bebê real é o mais novo integrante da família real.",
+            "runs_present": 23,
+            "total_occurrences": 23
+          },
+          {
+            "info": "O mais novo integrante da família real é um bebê.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O pai do mais novo bebê da família real estava sorridente durante a apresentação do bebê ao mundo.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente durante a apresentação do bebê ao mundo.",
+            "runs_present": 39,
+            "total_occurrences": 39
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente quando o bebê foi apresentado ao mundo em seu colo.",
+            "runs_present": 6,
+            "total_occurrences": 6
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente quando o bebê foi apresentado ao mundo no seu colo.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O pai do mais novo bebê real estava sorridente quando o bebê foi apresentado ao mundo.",
+            "runs_present": 10,
+            "total_occurrences": 10
+          },
+          {
+            "info": "O príncipe Harry e a duquesa Meghan Markle apareceram em público pela primeira vez com o filho.",
+            "runs_present": 89,
+            "total_occurrences": 89
+          },
+          {
+            "info": "O príncipe Harry fez muitos elogios à mulher.",
+            "runs_present": 8,
+            "total_occurrences": 8
+          },
+          {
+            "info": "O príncipe Harry ganhou palavras carinhosas da esposa depois de se derreter em elogios a ela.",
+            "runs_present": 3,
+            "total_occurrences": 3
+          },
+          {
+            "info": "O príncipe Harry recebeu palavras carinhosas da esposa depois de se derreter em elogios a ela.",
+            "runs_present": 73,
+            "total_occurrences": 73
+          },
+          {
+            "info": "O príncipe Harry recebeu palavras carinhosas da esposa depois de se derreter em elogios à mulher.",
+            "runs_present": 16,
+            "total_occurrences": 16
+          },
+          {
+            "info": "O príncipe Harry é o pai do mais novo bebê da família real.",
+            "runs_present": 7,
+            "total_occurrences": 7
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabe a quem o bebê puxou.",
+            "runs_present": 18,
+            "total_occurrences": 18
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabe a quem o bebê real puxou.",
+            "runs_present": 24,
+            "total_occurrences": 24
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabia a quem o bebê havia puxado.",
+            "runs_present": 4,
+            "total_occurrences": 4
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabia a quem o bebê puxou.",
+            "runs_present": 30,
+            "total_occurrences": 30
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabia a quem o bebê real havia puxado.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe brincou ao dizer que não sabia a quem o bebê real puxou.",
+            "runs_present": 7,
+            "total_occurrences": 7
+          },
+          {
+            "info": "O príncipe brincou e disse que não sabe a quem o bebê puxou.",
+            "runs_present": 5,
+            "total_occurrences": 5
+          },
+          {
+            "info": "O príncipe brincou e disse que não sabe a quem o bebê real Archie Harrison puxou.",
+            "runs_present": 1,
+            "total_occurrences": 1
+          },
+          {
+            "info": "O príncipe brincou e disse que não sabia a quem o bebê puxou.",
+            "runs_present": 9,
+            "total_occurrences": 9
+          },
+          {
+            "info": "O príncipe disse, em tom de brincadeira, que não sabe a quem o bebê puxou.",
+            "runs_present": 2,
+            "total_occurrences": 2
+          }
+        ]
+      },
+      "within_model_pairs": {
+        "pair_count": 4950,
+        "exact": {
+          "pair_count": 4950,
+          "mean_matched": 5.338787878787879,
+          "mean_total_unmatched": 12.142424242424243,
+          "mean_jaccard": 0.3146942651963822,
+          "min_jaccard": 0.05,
+          "max_jaccard": 0.8461538461538461,
+          "identical_pair_count": 0,
+          "mean_matched_fraction_per_catalog": 0.46896998848514004,
+          "mean_unmatched_fraction_per_catalog": 0.53103001151486,
+          "complete_match_rate": 0.0
+        },
+        "semantic": {
+          "pair_count": 4950,
+          "mean_matched": 10.294343434343434,
+          "mean_total_unmatched": 2.231313131313131,
+          "mean_jaccard": 0.8263911215047578,
+          "min_jaccard": 0.5,
+          "max_jaccard": 1.0,
+          "identical_pair_count": 436,
+          "mean_matched_fraction_per_catalog": 0.9044604463998402,
+          "mean_unmatched_fraction_per_catalog": 0.09553955360015966,
+          "complete_match_rate": 0.08808080808080808
+        },
+        "total_unmatched_definition": "unmatched_a + unmatched_b = n_a + n_b - 2 * matched",
+        "fraction_definition": "Mean of per-catalog matched/count and unmatched/count across the two catalogs in each pair; empty catalogs are omitted from these fractions."
+      }
+    }
+  },
+  "comparison": {
+    "primary_outcome": {
+      "outcome": "mean within-model pairwise semantic Jaccard",
+      "difference_direction": "Terra minus Luna; positive favors higher observed semantic repeatability for Terra under this proxy.",
+      "luna": {
+        "estimate": 0.7986191265175512,
+        "standard_error": 0.008553762918123197,
+        "n_runs": 100
+      },
+      "terra": {
+        "estimate": 0.8263911215047578,
+        "standard_error": 0.010631651153314024,
+        "n_runs": 100
+      },
+      "difference_terra_minus_luna": 0.027771994987206616,
+      "difference_percentage_points": 2.7771994987206616,
+      "approximate_95_percent_jackknife_interval_difference": [
+        0.0010268727254156979,
+        0.054517117248997535
+      ],
+      "approximate_95_percent_jackknife_interval_percentage_points": [
+        0.10268727254156979,
+        5.451711724899753
+      ],
+      "difference_standard_error": 0.01364547054173006,
+      "jackknife_method": "Delete one run at a time within each cohort; recompute the mean of all remaining unordered run-pair semantic Jaccards. For the difference of independently collected cohorts, combine cohort jackknife variances as sqrt(SE_Terra^2 + SE_Luna^2).",
+      "assumptions_and_limitations": "Approximate interval assumes exchangeable independent runs within each cohort and independent cohorts. Runs were sequential, so service/time dependence can violate this assumption; treat the interval as exploratory. Pairwise values are not treated as independent observations.",
+      "count_context": {
+        "luna_mean_global_canonical_count": 15.33,
+        "terra_mean_global_canonical_count": 11.41,
+        "terra_minus_luna_mean_count": -3.92,
+        "note": "Jaccard reflects both item identity and catalog size; count mean, sample SD, and range are reported alongside it to distinguish output volume from repeatability."
+      },
+      "accuracy_note": "No ground-truth labeling was used; this analysis does not measure factual accuracy."
+    },
+    "luna_joint_embedding_vs_original_analysis": {
+      "original_analysis": {
+        "summary_path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_20261117\\analysis\\summary.json",
+        "summary_sha256": "8d4d82cd02fab0bf0a50e8c56898aee7d6d579846be87064a2b63455bf57fdcf",
+        "embedding_artifact_path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_20261117\\analysis\\embeddings.json",
+        "embedding_artifact_sha256": "667c952e3f93697281853c8cc62a51fdd047b7b57b91a09ad30671612730a4f2",
+        "embedding_profile": {
+          "provider": "openai",
+          "model": "text-embedding-3-small",
+          "base_url": "https://api.openai.com/v1",
+          "dimensions": null,
+          "encoding_format": "float",
+          "cache_revision": "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+        },
+        "semantic_mean_jaccard": 0.7986191265175512,
+        "semantic_mean_matched": 13.545454545454545,
+        "semantic_mean_total_unmatched": 3.569090909090909,
+        "exact_mean_jaccard": 0.3163784707527644,
+        "count_summary": {
+          "n": 100,
+          "mean": 15.33,
+          "sample_variance_ddof1": 2.4859595959595957,
+          "sample_standard_deviation": 1.576692613022461,
+          "min": 13,
+          "max": 21,
+          "range": 8
+        }
+      },
+      "joint_union_embedding_analysis": {
+        "semantic_mean_jaccard": 0.7986191265175512,
+        "semantic_mean_matched": 13.545454545454545,
+        "semantic_mean_total_unmatched": 3.569090909090909,
+        "exact_mean_jaccard": 0.3163784707527644,
+        "count_summary": {
+          "n": 100,
+          "mean": 15.33,
+          "sample_variance_ddof1": 2.4859595959595957,
+          "sample_standard_deviation": 1.576692613022461,
+          "min": 13,
+          "max": 21,
+          "range": 8
+        }
+      },
+      "joint_minus_original": {
+        "semantic_mean_jaccard": 0.0,
+        "exact_mean_jaccard": 0.0
+      },
+      "interpretation": "Primary model comparison uses the jointly embedded Luna baseline because every Luna and Terra text was embedded together in one fresh pass. Differences from the prior Luna report reflect a separate post-hoc embedding pass and are disclosed here."
+    },
+    "raw_input_hash_equal": true,
+    "extraction_parameter_differences": {
+      "model": {
+        "luna": "gpt-6-luna",
+        "terra": "gpt-6.1-terra"
+      }
+    },
+    "configuration_differs_only_by_model": true,
+    "code_hash_differences": {
+      "experiments/configs/semantic_extraction.toml": {
+        "luna": "abb8cb4e3bf54e7fd7eb9e5e1b118420f132e7e2c0ad187cd8fae4331757c378",
+        "terra": "49055f8f728f999ffa9b74d89354dbc02fa0a45028b0276e0dd7db3d7664e9b7"
+      },
+      "modules/semantic_extraction/adapters/configuration.py": {
+        "luna": "741b2b4d7c85ccdfe765e75536e1d9fdc437c7375183d9f2676d8adc52d20f40",
+        "terra": "a19b72d9ae3580d6511c9cfd4e47fc53f7f6f2ab2a3e27325cfe40056084eaf2"
+      }
+    },
+    "all_non_model_code_hashes_equal": true,
+    "shared_grouping_configuration": {
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "base_url": "https://api.openai.com/v1",
+      "threshold": 0.85,
+      "dimensions": null,
+      "batch_size": 32,
+      "timeout_seconds": 60.0,
+      "api_key_env": "OPENAI_API_KEY",
+      "cache_revision": "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+    },
+    "shared_fresh_embedding_profile": {
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "base_url": "https://api.openai.com/v1",
+      "dimensions": null,
+      "encoding_format": "float",
+      "cache_revision": "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+    },
+    "common_posthoc_embedding_artifact": {
+      "path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_luna_vs_gpt61terra_20261118_shared\\embeddings.json",
+      "sha256": "d8c615fafa931b89e0fe3434a50ba4d9af443f06e162150c31823682713ccf14",
+      "distinct_text_count": 200
+    },
+    "common_embedding_audit": {
+      "path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_luna_vs_gpt61terra_20261118_shared\\audit.json",
+      "sha256": "832a11a753f19d7f03c052b4d37a68ad8d05f0a78bc20896678369e59a05d798",
+      "summary": {
+        "attempted_calls": 7,
+        "finished_calls": 7,
+        "failed_http_or_transport_calls": 0,
+        "calls_by_stage": {
+          "luna_terra_shared_analysis": 7
+        },
+        "usage_totals": {
+          "prompt_tokens": 4820,
+          "total_tokens": 4820
+        },
+        "retries": 0,
+        "effective_models": [
+          "text-embedding-3-small"
+        ],
+        "system_fingerprints": [],
+        "prompt_cache": {
+          "requested_mode": "explicit_without_breakpoints",
+          "extraction_calls": 0,
+          "read_fields_reported": 0,
+          "write_fields_reported": 0,
+          "reported_cached_tokens": null,
+          "reported_cache_write_tokens": null,
+          "zero_reads_verified_for_all_calls": false,
+          "zero_writes_verified_for_all_calls": false
+        }
+      },
+      "raw_trace_verification": {
+        "verified_calls": 7,
+        "verified_text_vectors": 200,
+        "verified_stage": "luna_terra_shared_analysis",
+        "trace_path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_luna_vs_gpt61terra_20261118_shared\\api\\calls.jsonl",
+        "trace_sha256": "bfcff147efd085fc4a86474d85421b1508fc9453ace287992df022ad12f2c076",
+        "request_response_hashes": [
+          {
+            "call_id": 1,
+            "request_sha256": "cf4f47303e0f9f67c7864f6ea45966312e96b5ba9b9136b2c5f85947170750fd",
+            "response_sha256": "71eb67ac87e27258f5b3812bd2d69328c6375ce063d2dd91a6a5c0f4265d3a74",
+            "input_count": 32
+          },
+          {
+            "call_id": 2,
+            "request_sha256": "5ef063a31b5f0acfdb88b9aac13fce19612c97818e13e4b5d18bf5cd66d4fb48",
+            "response_sha256": "3c259c1e60d65118fa0eda23992651d33e200100e6e2d2804d378944259eec54",
+            "input_count": 32
+          },
+          {
+            "call_id": 3,
+            "request_sha256": "36fa0e2253816be148368e065daf4f1be695ff667da27db393a4f8a20b5865c5",
+            "response_sha256": "fae174d69d2628de38713cd9c4b5ac3eaf46a0d06eb6d1788388aed6d1f51640",
+            "input_count": 32
+          },
+          {
+            "call_id": 4,
+            "request_sha256": "80c524d662b07e25907451cbb95c14c5b570f05fc274d038856cdefa2d406652",
+            "response_sha256": "cada79f2c1264fd87bbc4f4eb51e5f67de356a94a327dcdcebfc35beb9616d29",
+            "input_count": 32
+          },
+          {
+            "call_id": 5,
+            "request_sha256": "6a044ca30de52044ce5eba01ebba62a0d9317640fbe073364056a6e376fe6c61",
+            "response_sha256": "188391338ea3ec55623b4827c63e5d9ec1aab8ae1bb90d31820ce25412028416",
+            "input_count": 32
+          },
+          {
+            "call_id": 6,
+            "request_sha256": "2817436cc84608d865b595ce01cc4eaeb9739a9be26ee2ba6f8dd6337f046018",
+            "response_sha256": "be1862efafda02b6ae400e237b858acb9cd0ab22b00fd34be6907ee2892ad0d2",
+            "input_count": 32
+          },
+          {
+            "call_id": 7,
+            "request_sha256": "cc7573d7f78016fcc56c079b7f4935d1c00b45fe1009f91829c02e007af413e6",
+            "response_sha256": "2df9f84a841e3fff8988f825150699e8a9d5b3ba529f058b75463d40737e41a6",
+            "input_count": 8
+          }
+        ],
+        "audit_summary_matches_trace": true,
+        "artifact_vectors_match_hashed_responses": true
+      }
+    },
+    "shared_analysis_manifest": {
+      "path": "C:\\Users\\Arklok\\Desktop\\usp\\experiments\\canonical_variance_bebe_luna_vs_gpt61terra_20261118_shared\\manifest.json",
+      "sha256": "bceff33a8b7bc6a951dbc0b16879df9024c393129acd68eb48773cae64289506",
+      "cohorts_bound": [
+        "luna",
+        "terra"
+      ],
+      "catalogs_bound": 200,
+      "shared_artifacts_bound": [
+        "embeddings.json",
+        "audit.json",
+        "api/calls.jsonl"
+      ]
+    },
+    "semantic_threshold": 0.85,
+    "semantic_method": "cosine >= threshold; deterministic maximum-cardinality one-to-one matching with augmenting paths; ties follow catalog order, then descending cosine and right index",
+    "semantic_caveat": "Semantic matches are embedding-based repeatability proxies, not verified factual equivalence.",
+    "exact_method": "literal raw info string equality, multiset counts, with one-to-one occurrence matching",
+    "within_pair_design": "all unordered pairs within each 100-run cohort",
+    "cross_pair_design": "full Cartesian product of 100 Luna and 100 Terra catalogs; no run-ID pairing",
+    "unmatched_definition": "total_unmatched = unmatched_luna_or_a + unmatched_terra_or_b = n_a + n_b - 2*matched",
+    "inference_note": "Pairwise catalogs are dependent and are not treated as independent observations. The primary interval uses a leave-one-run-out jackknife over within-cohort U-statistics and assumes exchangeable independent sequential runs; it is approximate and exploratory. No accuracy or causal model effect is measured.",
+    "pair_counts": {
+      "within_each_model": 4950,
+      "cross_model": 10000
+    },
+    "cross_model_pairs": {
+      "pair_count": 10000,
+      "exact": {
+        "pair_count": 10000,
+        "mean_matched": 1.336,
+        "mean_total_unmatched": 24.068,
+        "mean_jaccard": 0.053169759596392974,
+        "min_jaccard": 0.0,
+        "max_jaccard": 0.14285714285714285,
+        "identical_pair_count": 0,
+        "mean_matched_fraction_per_catalog": 0.10221501105104046,
+        "mean_unmatched_fraction_per_catalog": 0.8977849889489594,
+        "complete_match_rate": 0.0
+      },
+      "semantic": {
+        "pair_count": 10000,
+        "mean_matched": 9.4973,
+        "mean_total_unmatched": 7.7454,
+        "mean_jaccard": 0.560428827412817,
+        "min_jaccard": 0.2608695652173913,
+        "max_jaccard": 0.8461538461538461,
+        "identical_pair_count": 0,
+        "mean_matched_fraction_per_catalog": 0.730128533496732,
+        "mean_unmatched_fraction_per_catalog": 0.269871466503268,
+        "complete_match_rate": 0.0
+      },
+      "total_unmatched_definition": "unmatched_a + unmatched_b = n_a + n_b - 2 * matched",
+      "fraction_definition": "Mean of per-catalog matched/count and unmatched/count across the two catalogs in each pair; empty catalogs are omitted from these fractions."
+    }
+  }
+}
