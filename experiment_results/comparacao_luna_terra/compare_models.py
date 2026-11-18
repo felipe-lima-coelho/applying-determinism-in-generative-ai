@@ -188,11 +188,91 @@ def _pair_rows(
 
 
 def _summarize_pairs(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    summaries = {}
+    for criterion in ("exact", "semantic"):
+        base = _pairwise_summary(rows, criterion)
+        matched_fractions = []
+        unmatched_fractions = []
+        for row in rows:
+            metric = row[criterion]
+            for count, matched, unmatched in (
+                (row["count_a"], metric["matched"], metric["unmatched_a"]),
+                (row["count_b"], metric["matched"], metric["unmatched_b"]),
+            ):
+                if count:
+                    matched_fractions.append(matched / count)
+                    unmatched_fractions.append(unmatched / count)
+        base["mean_matched_fraction_per_catalog"] = (
+            math.fsum(matched_fractions) / len(matched_fractions) if matched_fractions else None
+        )
+        base["mean_unmatched_fraction_per_catalog"] = (
+            math.fsum(unmatched_fractions) / len(unmatched_fractions) if unmatched_fractions else None
+        )
+        base["complete_match_rate"] = (
+            base["identical_pair_count"] / base["pair_count"] if base["pair_count"] else None
+        )
+        summaries[criterion] = base
     return {
         "pair_count": len(rows),
-        "exact": _pairwise_summary(rows, "exact"),
-        "semantic": _pairwise_summary(rows, "semantic"),
+        **summaries,
         "total_unmatched_definition": "unmatched_a + unmatched_b = n_a + n_b - 2 * matched",
+        "fraction_definition": "Mean of per-catalog matched/count and unmatched/count across the two catalogs in each pair; empty catalogs are omitted from these fractions.",
+    }
+
+
+def _jackknife_pair_mean(rows: Sequence[dict[str, Any]], run_count: int, criterion: str = "semantic") -> dict[str, float | int]:
+    if run_count < 3:
+        raise ValueError("Jackknife requires at least three runs.")
+    values = [row[criterion]["jaccard"] for row in rows]
+    estimate = math.fsum(values) / len(values)
+    leave_one_out = []
+    for run in range(1, run_count + 1):
+        remaining = [
+            row[criterion]["jaccard"]
+            for row in rows
+            if row["run_a"] != run and row["run_b"] != run
+        ]
+        expected = (run_count - 1) * (run_count - 2) // 2
+        if len(remaining) != expected:
+            raise ValueError("Within-cohort pair rows are incomplete for jackknife.")
+        leave_one_out.append(math.fsum(remaining) / len(remaining))
+    loo_mean = math.fsum(leave_one_out) / len(leave_one_out)
+    variance = (run_count - 1) / run_count * math.fsum((value - loo_mean) ** 2 for value in leave_one_out)
+    return {"estimate": estimate, "standard_error": math.sqrt(variance), "n_runs": run_count}
+
+
+def _primary_outcome(
+    luna_rows: Sequence[dict[str, Any]],
+    terra_rows: Sequence[dict[str, Any]],
+    luna_count: int,
+    terra_count: int,
+    luna_counts: Mapping[str, Any],
+    terra_counts: Mapping[str, Any],
+) -> dict[str, Any]:
+    luna_estimate = _jackknife_pair_mean(luna_rows, luna_count)
+    terra_estimate = _jackknife_pair_mean(terra_rows, terra_count)
+    difference = terra_estimate["estimate"] - luna_estimate["estimate"]
+    difference_se = math.hypot(luna_estimate["standard_error"], terra_estimate["standard_error"])
+    ci = [difference - 1.96 * difference_se, difference + 1.96 * difference_se]
+    return {
+        "outcome": "mean within-model pairwise semantic Jaccard",
+        "difference_direction": "Terra minus Luna; positive favors higher observed semantic repeatability for Terra under this proxy.",
+        "luna": luna_estimate,
+        "terra": terra_estimate,
+        "difference_terra_minus_luna": difference,
+        "difference_percentage_points": 100 * difference,
+        "approximate_95_percent_jackknife_interval_difference": ci,
+        "approximate_95_percent_jackknife_interval_percentage_points": [100 * ci[0], 100 * ci[1]],
+        "difference_standard_error": difference_se,
+        "jackknife_method": "Delete one run at a time within each cohort; recompute the mean of all remaining unordered run-pair semantic Jaccards. For the difference of independently collected cohorts, combine cohort jackknife variances as sqrt(SE_Terra^2 + SE_Luna^2).",
+        "assumptions_and_limitations": "Approximate interval assumes exchangeable independent runs within each cohort and independent cohorts. Runs were sequential, so service/time dependence can violate this assumption; treat the interval as exploratory. Pairwise values are not treated as independent observations.",
+        "count_context": {
+            "luna_mean_global_canonical_count": luna_counts["mean"],
+            "terra_mean_global_canonical_count": terra_counts["mean"],
+            "terra_minus_luna_mean_count": terra_counts["mean"] - luna_counts["mean"],
+            "note": "Jaccard reflects both item identity and catalog size; count mean, sample SD, and range are reported alongside it to distinguish output volume from repeatability.",
+        },
+        "accuracy_note": "No ground-truth labeling was used; this analysis does not measure factual accuracy.",
     }
 
 
@@ -256,10 +336,16 @@ def _within_csv_row(label: str, cohort: dict[str, Any], exact_frequency: dict[st
         "exact_mean_total_unmatched_per_pair": exact["mean_total_unmatched"],
         "exact_mean_jaccard": exact["mean_jaccard"],
         "exact_identical_pair_count": exact["identical_pair_count"],
+        "exact_complete_match_rate": exact["complete_match_rate"],
+        "exact_mean_matched_fraction_per_catalog": exact["mean_matched_fraction_per_catalog"],
+        "exact_mean_unmatched_fraction_per_catalog": exact["mean_unmatched_fraction_per_catalog"],
         "semantic_mean_matched": semantic["mean_matched"],
         "semantic_mean_total_unmatched_per_pair": semantic["mean_total_unmatched"],
         "semantic_mean_jaccard": semantic["mean_jaccard"],
         "semantic_identical_pair_count": semantic["identical_pair_count"],
+        "semantic_complete_match_rate": semantic["complete_match_rate"],
+        "semantic_mean_matched_fraction_per_catalog": semantic["mean_matched_fraction_per_catalog"],
+        "semantic_mean_unmatched_fraction_per_catalog": semantic["mean_unmatched_fraction_per_catalog"],
         "literal_100_run_intersection_multiset": exact_frequency["multiset_intersection_count"],
         "literal_100_run_union_distinct_texts": exact_frequency["union_distinct_text_count"],
     }
@@ -282,9 +368,8 @@ def _write_figure(
     all_counts = [len(texts) for cohort in cohorts for texts in cohort["texts_by_run"]]
     low, high = min(all_counts), max(all_counts)
     bins = np.arange(low - 0.5, high + 1.5, 1)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
-
-    count_ax, pair_ax = axes
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True)
+    count_ax, primary_ax, support_ax, cross_ax = axes.ravel()
     for cohort, color in zip(cohorts, ("#4C78A8", "#F58518")):
         counts = [len(texts) for texts in cohort["texts_by_run"]]
         stats = _count_summary(cohort["texts_by_run"])
@@ -297,35 +382,67 @@ def _write_figure(
     count_ax.legend(frameon=False, fontsize=9)
     count_ax.grid(axis="y", alpha=0.2)
 
-    datasets = []
-    labels = []
-    colors = []
-    for rows, label in ((luna_rows, "Luna"), (terra_rows, "Terra"), (cross_rows, "Luna × Terra")):
+    luna_jackknife = _jackknife_pair_mean(luna_rows, len(luna["runs"]))
+    terra_jackknife = _jackknife_pair_mean(terra_rows, len(terra["runs"]))
+    delta = terra_jackknife["estimate"] - luna_jackknife["estimate"]
+    delta_se = math.hypot(luna_jackknife["standard_error"], terra_jackknife["standard_error"])
+    delta_ci = (delta - 1.96 * delta_se, delta + 1.96 * delta_se)
+    primary_data = [
+        [row["semantic"]["jaccard"] for row in luna_rows],
+        [row["semantic"]["jaccard"] for row in terra_rows],
+    ]
+    primary = primary_ax.boxplot(primary_data, patch_artist=True, showmeans=True, showfliers=False)
+    for box, color in zip(primary["boxes"], ("#4C78A8", "#F58518")):
+        box.set_facecolor(color)
+        box.set_alpha(0.62)
+    primary_ax.set_xticks((1, 2), ("gpt-6-luna", "gpt-6.1-terra"))
+    primary_ax.set_ylim(-0.02, 1.02)
+    primary_ax.set_ylabel("Jaccard semântico (0–1)")
+    primary_ax.set_title("Principal: estabilidade semântica dentro de cada modelo")
+    primary_ax.text(
+        0.5, 0.96,
+        f"Terra − Luna = {100 * delta:+.2f} p.p.\nIC 95% jackknife ≈ [{100 * delta_ci[0]:+.2f}, {100 * delta_ci[1]:+.2f}] p.p.",
+        transform=primary_ax.transAxes, ha="center", va="top", fontsize=9,
+        bbox={"facecolor": "white", "alpha": 0.78, "edgecolor": "none"},
+    )
+    primary_ax.grid(axis="y", alpha=0.2)
+
+    support_data, support_labels, support_colors = [], [], []
+    for rows, label in ((luna_rows, "Luna"), (terra_rows, "Terra")):
         for metric, metric_label, color in (
             ("exact", "literal", "#4C78A8"),
             ("semantic", "semântico proxy", "#F58518"),
         ):
-            datasets.append([row[metric]["jaccard"] for row in rows])
-            labels.append(f"{label}\n{metric_label}")
-            colors.append(color)
-    bp = pair_ax.boxplot(datasets, patch_artist=True, showmeans=True, showfliers=False)
-    for box, color in zip(bp["boxes"], colors):
+            support_data.append([row[metric]["jaccard"] for row in rows])
+            support_labels.append(f"{label}\n{metric_label}")
+            support_colors.append(color)
+    support = support_ax.boxplot(support_data, patch_artist=True, showmeans=True, showfliers=False)
+    for box, color in zip(support["boxes"], support_colors):
         box.set_facecolor(color)
         box.set_alpha(0.62)
-    pair_ax.set_xticks(range(1, len(labels) + 1), labels)
-    pair_ax.set_ylim(-0.02, 1.02)
-    pair_ax.set_ylabel("Jaccard (0–1)")
-    pair_ax.set_title("Sobreposição entre catálogos")
-    pair_ax.grid(axis="y", alpha=0.2)
-    pair_ax.text(
-        0.5, -0.22,
-        "Dentro de cada modelo: 4.950 pares; cruzado Luna × Terra: 10.000 pares.\n"
-        "Os pares reutilizam execuções e são dependentes; caixas e médias são descritivas.",
-        transform=pair_ax.transAxes, ha="center", va="top", fontsize=8,
-    )
+    support_ax.set_xticks(range(1, 5), support_labels)
+    support_ax.set_ylim(-0.02, 1.02)
+    support_ax.set_ylabel("Jaccard (0–1)")
+    support_ax.set_title("Apoio: igualdade literal e proxy semântico")
+    support_ax.grid(axis="y", alpha=0.2)
+
+    cross_data = [
+        [row["exact"]["jaccard"] for row in cross_rows],
+        [row["semantic"]["jaccard"] for row in cross_rows],
+    ]
+    cross = cross_ax.boxplot(cross_data, patch_artist=True, showmeans=True, showfliers=False)
+    for box, color in zip(cross["boxes"], ("#4C78A8", "#F58518")):
+        box.set_facecolor(color)
+        box.set_alpha(0.62)
+    cross_ax.set_xticks((1, 2), ("literal", "semântico proxy"))
+    cross_ax.set_ylim(-0.02, 1.02)
+    cross_ax.set_ylabel("Jaccard (0–1)")
+    cross_ax.set_title("Auxiliar: cruzamento Luna × Terra (10.000 pares)")
+    cross_ax.grid(axis="y", alpha=0.2)
 
     fig.suptitle(
-        "Variação do catálogo global — gpt-6-luna × gpt-6.1-terra",
+        "Estabilidade do catálogo global — gpt-6-luna × gpt-6.1-terra\n"
+        "Comparações por pares reutilizam execuções e são dependentes; Jaccard semântico é um proxy, não uma medida de acurácia",
         fontsize=13,
     )
     fig.savefig(path, dpi=160)
@@ -344,9 +461,8 @@ def compare(
 ) -> dict[str, Path]:
     if threshold != 0.85:
         raise ValueError("The comparison semantic threshold is fixed at 0.85.")
-    output_dir.mkdir(parents=True, exist_ok=True)
     output_names = ("summary.json", "within_model.csv", "per_run_counts.csv", "cross_model.csv", "comparison.png")
-    if not overwrite and any((output_dir / name).exists() for name in output_names):
+    if not overwrite and output_dir.exists() and any((output_dir / name).exists() for name in output_names):
         raise FileExistsError("Comparison outputs already exist; pass --overwrite to replace them.")
 
     luna = _load_cohort("gpt-6-luna", luna_root, expected_runs)
@@ -401,6 +517,48 @@ def compare(
     terra_frequency = _exact_frequency(terra["texts_by_run"])
     luna_count_summary = _count_summary(luna["texts_by_run"])
     terra_count_summary = _count_summary(terra["texts_by_run"])
+    primary = _primary_outcome(
+        luna_within, terra_within, expected_runs, expected_runs,
+        luna_count_summary, terra_count_summary,
+    )
+
+    original_luna_summary_path = luna_root / "analysis" / "summary.json"
+    original_luna_embeddings_path = luna_root / "analysis" / "embeddings.json"
+    original_luna_summary = _read_json(original_luna_summary_path)
+    original_luna_embeddings = _read_json(original_luna_embeddings_path)
+    original_count_summary = original_luna_summary["global_canonical_count"]
+    original_exact_summary = original_luna_summary["pairwise_summary"]["exact"]
+    original_semantic_summary = original_luna_summary["pairwise_summary"]["semantic"]
+    if [row["global_canonical_count"] for row in original_luna_summary["per_run"]] != [
+        len(texts) for texts in luna["texts_by_run"]
+    ]:
+        raise ValueError("Historical Luna summary counts do not match the accepted Luna catalog artifacts.")
+    jointly_embedded_luna_comparison = {
+        "original_analysis": {
+            "summary_path": str(original_luna_summary_path.resolve()),
+            "summary_sha256": _sha256(original_luna_summary_path),
+            "embedding_artifact_path": str(original_luna_embeddings_path.resolve()),
+            "embedding_artifact_sha256": _sha256(original_luna_embeddings_path),
+            "embedding_profile": original_luna_embeddings.get("profile"),
+            "semantic_mean_jaccard": original_semantic_summary["mean_jaccard"],
+            "semantic_mean_matched": original_semantic_summary["mean_matched"],
+            "semantic_mean_total_unmatched": original_semantic_summary["mean_total_unmatched"],
+            "exact_mean_jaccard": original_exact_summary["mean_jaccard"],
+            "count_summary": original_count_summary,
+        },
+        "joint_union_embedding_analysis": {
+            "semantic_mean_jaccard": luna_pair_summary["semantic"]["mean_jaccard"],
+            "semantic_mean_matched": luna_pair_summary["semantic"]["mean_matched"],
+            "semantic_mean_total_unmatched": luna_pair_summary["semantic"]["mean_total_unmatched"],
+            "exact_mean_jaccard": luna_pair_summary["exact"]["mean_jaccard"],
+            "count_summary": luna_count_summary,
+        },
+        "joint_minus_original": {
+            "semantic_mean_jaccard": luna_pair_summary["semantic"]["mean_jaccard"] - original_semantic_summary["mean_jaccard"],
+            "exact_mean_jaccard": luna_pair_summary["exact"]["mean_jaccard"] - original_exact_summary["mean_jaccard"],
+        },
+        "interpretation": "Primary model comparison uses the jointly embedded Luna baseline because every Luna and Terra text was embedded together in one fresh pass. Differences from the prior Luna report reflect a separate post-hoc embedding pass and are disclosed here.",
+    }
 
     code_changes = {
         path: {"luna": luna["code_hashes"].get(path), "terra": terra["code_hashes"].get(path)}
@@ -432,6 +590,8 @@ def compare(
             },
         },
         "comparison": {
+            "primary_outcome": primary,
+            "luna_joint_embedding_vs_original_analysis": jointly_embedded_luna_comparison,
             "raw_input_hash_equal": True,
             "extraction_parameter_differences": extraction_differences,
             "configuration_differs_only_by_model": model_only_configuration_change,
@@ -458,7 +618,7 @@ def compare(
             "within_pair_design": "all unordered pairs within each 100-run cohort",
             "cross_pair_design": "full Cartesian product of 100 Luna and 100 Terra catalogs; no run-ID pairing",
             "unmatched_definition": "total_unmatched = unmatched_luna_or_a + unmatched_terra_or_b = n_a + n_b - 2*matched",
-            "inference_note": "All pairwise results are descriptive; pairs share catalogs and are not independent observations. No pair-level confidence intervals or p-values are computed.",
+            "inference_note": "Pairwise catalogs are dependent and are not treated as independent observations. The primary interval uses a leave-one-run-out jackknife over within-cohort U-statistics and assumes exchangeable independent sequential runs; it is approximate and exploratory. No accuracy or causal model effect is measured.",
             "pair_counts": {
                 "within_each_model": expected_runs * (expected_runs - 1) // 2,
                 "cross_model": expected_runs * expected_runs,
@@ -488,12 +648,30 @@ def compare(
             "exact_unmatched_terra": exact["unmatched_b"],
             "exact_total_unmatched": exact["unmatched_a"] + exact["unmatched_b"],
             "exact_jaccard": exact["jaccard"],
+            "exact_luna_matched_fraction": exact["coverage_a"],
+            "exact_terra_matched_fraction": exact["coverage_b"],
+            "exact_mean_matched_fraction_per_catalog": math.fsum(
+                value for value in (exact["coverage_a"], exact["coverage_b"]) if value is not None
+            ) / sum(value is not None for value in (exact["coverage_a"], exact["coverage_b"]))
+            if exact["coverage_a"] is not None or exact["coverage_b"] is not None else None,
+            "exact_fully_unmatched_fraction": (
+                exact["unmatched_a"] + exact["unmatched_b"]
+            ) / (row["count_a"] + row["count_b"]) if row["count_a"] + row["count_b"] else None,
             "exact_fully_matched": exact["unmatched_a"] == exact["unmatched_b"] == 0,
             "semantic_matched": semantic["matched"],
             "semantic_unmatched_luna": semantic["unmatched_a"],
             "semantic_unmatched_terra": semantic["unmatched_b"],
             "semantic_total_unmatched": semantic["unmatched_a"] + semantic["unmatched_b"],
             "semantic_jaccard": semantic["jaccard"],
+            "semantic_luna_matched_fraction": semantic["coverage_a"],
+            "semantic_terra_matched_fraction": semantic["coverage_b"],
+            "semantic_mean_matched_fraction_per_catalog": math.fsum(
+                value for value in (semantic["coverage_a"], semantic["coverage_b"]) if value is not None
+            ) / sum(value is not None for value in (semantic["coverage_a"], semantic["coverage_b"]))
+            if semantic["coverage_a"] is not None or semantic["coverage_b"] is not None else None,
+            "semantic_fully_unmatched_fraction": (
+                semantic["unmatched_a"] + semantic["unmatched_b"]
+            ) / (row["count_a"] + row["count_b"]) if row["count_a"] + row["count_b"] else None,
             "semantic_fully_matched": semantic["unmatched_a"] == semantic["unmatched_b"] == 0,
         })
 
@@ -504,6 +682,7 @@ def compare(
         "cross_model": output_dir / "cross_model.csv",
         "figure": output_dir / "comparison.png",
     }
+    output_dir.mkdir(parents=True, exist_ok=True)
     paths["summary"].write_text(json.dumps(summary, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     within_fields = list(within_rows[0])
     _write_csv(paths["within_model"], within_fields, within_rows)
