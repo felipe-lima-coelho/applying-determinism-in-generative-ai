@@ -25,6 +25,27 @@ from determinism.experiments.canonical_variance_analysis import (
     _semantic_match_count,
     _validated_vectors,
 )
+from determinism.modules.semantic_grouping.adapters.postgres_vectors import canonical_float32
+
+
+EXPECTED_MODELS = {"gpt-6-luna", "gpt-6.1-terra"}
+ALLOWED_CODE_HASH_CHANGES = {
+    "experiments/configs/semantic_extraction.toml",
+    "modules/semantic_extraction/adapters/configuration.py",
+}
+EXPECTED_EXTRACTION_SETTINGS = {
+    "provider": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "max_concurrency": 4,
+    "temperature": 0.0,
+    "seed": 42,
+    "reasoning_effort": "none",
+    "timeout_seconds": 60.0,
+    "max_completion_tokens": 4096,
+    "api_key_env": "OPENAI_API_KEY",
+    "max_generations_per_segment": 20,
+}
+EXPECTED_ANALYSIS_STAGE = "luna_terra_shared_analysis"
 
 
 def _read_json(path: Path) -> Any:
@@ -39,13 +60,164 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _load_cohort(label: str, root: Path, expected_runs: int) -> dict[str, Any]:
+def _json_hash(value: Any) -> str:
+    raw = json.dumps(value, ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _validate_run_binding(root: Path, manifest: Mapping[str, Any], run: Mapping[str, Any]) -> Path:
+    run_dir = (root / run["directory"]).resolve()
+    if not run_dir.is_relative_to(root.resolve()):
+        raise ValueError("Accepted run directory escapes its experiment root.")
+    run_json_path = run_dir / "run.json"
+    if _read_json(run_json_path) != run:
+        raise ValueError(f"Accepted run {run.get('run')} differs from its retained run.json audit record.")
+    attempt = next((
+        item for item in manifest.get("attempts", [])
+        if item.get("run") == run.get("run") and item.get("attempt") == run.get("attempt")
+    ), None)
+    if attempt is None or attempt != run:
+        raise ValueError(f"Accepted run {run.get('run')} is not bound to its matching manifest attempt.")
+
+    expected_input_hash = manifest["specification"]["input_sha256"]
+    run_hashes = run.get("artifact_sha256", {})
+    required_artifacts = {"raw.json", "global.json"}
+    if not required_artifacts <= set(run_hashes):
+        raise ValueError(f"Accepted run {run.get('run')} lacks raw/global artifact hashes.")
+    for filename, expected_hash in run_hashes.items():
+        artifact = (run_dir / filename).resolve()
+        if (not artifact.is_relative_to(run_dir) or not artifact.is_file()
+                or _sha256(artifact) != expected_hash):
+            raise ValueError(f"Accepted run {run.get('run')} artifact hash mismatch: {filename}.")
+    if run_hashes["raw.json"] != expected_input_hash:
+        raise ValueError(f"Accepted run {run.get('run')} raw snapshot hash differs from its manifest input.")
+    return run_dir
+
+
+def _validate_cohort_configuration(cohort: Mapping[str, Any], expected_model: str) -> None:
+    if expected_model not in EXPECTED_MODELS:
+        raise ValueError(f"Unsupported comparison model {expected_model!r}.")
+    config = cohort["configuration"]
+    extraction = config.get("extraction", {})
+    grouping = config.get("grouping", {})
+    if extraction.get("model") != expected_model:
+        raise ValueError(f"Expected extraction model {expected_model}, got {extraction.get('model')!r}.")
+    for key, expected in EXPECTED_EXTRACTION_SETTINGS.items():
+        if extraction.get(key) != expected:
+            raise ValueError(f"{expected_model} extraction setting {key} must be {expected!r}.")
+    if grouping.get("threshold") != 0.85:
+        raise ValueError(f"{expected_model} grouping threshold must be 0.85.")
+    protocol = cohort["manifest"].get("protocol", {})
+    if (protocol.get("persisted_cache_reads") != 0 or protocol.get("cross_run_vector_reuse") is not False
+            or protocol.get("local_to_global_vector_reuse") is not False
+            or protocol.get("sequential_repeats") is not True
+            or protocol.get("order") != ["mapping", "extraction", "local_grouping", "global_grouping"]):
+        raise ValueError(f"{expected_model} manifest does not certify fresh, uncached pipeline embeddings.")
+    expected_effective = {expected_model, grouping.get("model")}
+    for run in cohort["runs"]:
+        api = run.get("api", {})
+        if api.get("attempted_calls") != api.get("finished_calls") or api.get("failed_http_or_transport_calls") != 0 or api.get("retries") != 0:
+            raise ValueError(f"{expected_model} run {run['run']} has incomplete/failed/retried API calls.")
+        if set(api.get("effective_models", [])) != expected_effective:
+            raise ValueError(f"{expected_model} run {run['run']} has unexpected effective model names.")
+        prompt_cache = api.get("prompt_cache", {})
+        if prompt_cache.get("zero_reads_verified_for_all_calls") is not True or prompt_cache.get("zero_writes_verified_for_all_calls") is not True:
+            raise ValueError(f"{expected_model} run {run['run']} does not verify zero prompt-cache reads/writes.")
+        local_events = [event.get("action") for event in run.get("local_vector_handoff", [])]
+        if local_events != ["empty_lookup", "receive_fresh_api_vectors", "consume_fresh_float32_vectors_once"]:
+            raise ValueError(f"{expected_model} run {run['run']} local embeddings were not freshly handed off once.")
+        global_events = run.get("global_vector_requests", [])
+        if not global_events or any(event.get("action") != "fresh_global_api_embeddings" for event in global_events):
+            raise ValueError(f"{expected_model} run {run['run']} global embeddings were not freshly requested.")
+
+
+def _verify_run_api_trace(run_dir: Path, run: Mapping[str, Any], configuration: Mapping[str, Any]) -> None:
+    trace_dir = run_dir / "api"
+    calls_path = trace_dir / "calls.jsonl"
+    if not calls_path.is_file():
+        raise ValueError(f"Run {run.get('run')} raw API trace calls.jsonl is missing.")
+    events = [json.loads(line) for line in calls_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    starts = {event["call_id"]: event for event in events if event.get("event") == "start"}
+    finishes = {event["call_id"]: event for event in events if event.get("event") == "finish"}
+    api_summary = run.get("api", {})
+    if (not starts or set(starts) != set(finishes)
+            or len(starts) != api_summary.get("attempted_calls")
+            or len(finishes) != api_summary.get("finished_calls")):
+        raise ValueError(f"Run {run.get('run')} API summary is not bound to a complete call trace.")
+    if api_summary.get("failed_http_or_transport_calls") != 0 or api_summary.get("retries") != 0:
+        raise ValueError(f"Run {run.get('run')} API summary records a failed or retried call.")
+
+    extraction = configuration["extraction"]
+    grouping = configuration["grouping"]
+    stages = Counter()
+    observed_models = set()
+    for call_id, start in starts.items():
+        finish = finishes[call_id]
+        if finish.get("status") != "received" or finish.get("retries") != 0 or finish.get("context") != start.get("context"):
+            raise ValueError(f"Run {run.get('run')} API call {call_id} has an invalid response audit.")
+        stage = start.get("context", {}).get("stage")
+        stages[stage] += 1
+        stem = f"call_{call_id:04d}"
+        request_path = trace_dir / f"{stem}.request.json"
+        response_path = trace_dir / f"{stem}.response.json"
+        if (not request_path.is_file() or not response_path.is_file()
+                or _sha256(request_path) != start.get("request_sha256")
+                or _sha256(response_path) != finish.get("response_sha256")):
+            raise ValueError(f"Run {run.get('run')} API call {call_id} request/response hash mismatch.")
+        body = json.loads(request_path.read_text(encoding="utf-8"))
+        if stage == "extraction":
+            expected_url = extraction["base_url"].rstrip("/") + "/chat/completions"
+            expected_values = {
+                "model": extraction["model"],
+                "temperature": 0.0,
+                "seed": 42,
+                "reasoning_effort": "none",
+                "max_completion_tokens": extraction["max_completion_tokens"],
+                "store": False,
+                "prompt_cache_options": {"mode": "explicit"},
+            }
+        elif stage in ("local_grouping", "global_grouping"):
+            expected_url = grouping["base_url"].rstrip("/") + "/embeddings"
+            expected_values = {"model": grouping["model"], "encoding_format": "float"}
+            if grouping.get("dimensions") is None:
+                if "dimensions" in body:
+                    raise ValueError(f"Run {run.get('run')} embedding call {call_id} changed dimensions.")
+            elif body.get("dimensions") != grouping["dimensions"]:
+                raise ValueError(f"Run {run.get('run')} embedding call {call_id} changed dimensions.")
+            if not isinstance(body.get("input"), list) or not body["input"]:
+                raise ValueError(f"Run {run.get('run')} embedding call {call_id} has no input texts.")
+        else:
+            raise ValueError(f"Run {run.get('run')} API call {call_id} has unexpected stage {stage!r}.")
+        if start.get("url") != expected_url or any(body.get(key) != value for key, value in expected_values.items()):
+            raise ValueError(f"Run {run.get('run')} API call {call_id} used unexpected model parameters.")
+        if finish.get("model") != body.get("model"):
+            raise ValueError(f"Run {run.get('run')} API call {call_id} returned a different model than requested.")
+        observed_models.add(finish.get("model"))
+
+    if dict(stages) != api_summary.get("calls_by_stage"):
+        raise ValueError(f"Run {run.get('run')} API stage counts do not match its call trace.")
+    expected_models = {extraction["model"], grouping["model"]}
+    if observed_models != expected_models or set(api_summary.get("effective_models", [])) != expected_models:
+        raise ValueError(f"Run {run.get('run')} observed API models differ from configured models.")
+
+
+def _load_cohort(label: str, root: Path, expected_model: str, expected_runs: int) -> dict[str, Any]:
     manifest_path = root / "experiment.json"
     config_path = root / "configuration.json"
     hashes_path = root / "code_hashes.json"
     manifest, config, code_hashes = map(_read_json, (manifest_path, config_path, hashes_path))
     if manifest.get("status") != "completed":
         raise ValueError(f"{label} experiment is not completed.")
+    specification = manifest.get("specification", {})
+    if specification.get("repeats") != expected_runs:
+        raise ValueError(f"{label} manifest does not specify exactly {expected_runs} repetitions.")
+    if specification.get("configuration_sha256") != _json_hash(config):
+        raise ValueError(f"{label} configuration.json does not match its manifest configuration hash.")
+    if specification.get("code_sha256") != _json_hash(code_hashes):
+        raise ValueError(f"{label} code_hashes.json does not match its manifest code hash.")
+    raw_path = root / "raw.json"
+    if not raw_path.is_file() or _sha256(raw_path) != specification.get("input_sha256"):
+        raise ValueError(f"{label} root raw.json does not match its manifest input hash.")
     accepted = manifest.get("runs")
     if not isinstance(accepted, list) or len(accepted) != expected_runs:
         raise ValueError(f"{label} must have exactly {expected_runs} accepted runs.")
@@ -53,13 +225,17 @@ def _load_cohort(label: str, root: Path, expected_runs: int) -> dict[str, Any]:
     run_ids = [row.get("run") for row in accepted]
     if run_ids != list(range(1, expected_runs + 1)):
         raise ValueError(f"{label} accepted runs must have unique IDs 1..{expected_runs}.")
+    _validate_cohort_configuration({"configuration": config, "manifest": manifest, "runs": accepted}, expected_model)
 
     catalogs: list[dict[str, Any]] = []
     texts_by_run: list[list[str]] = []
     for run in accepted:
         if run.get("status") != "completed":
             raise ValueError(f"{label} run {run['run']} is not completed.")
-        directory = root / run["directory"]
+        if run.get("threshold_local") != 0.85 or run.get("threshold_global") != 0.85:
+            raise ValueError(f"{label} run {run['run']} does not use threshold 0.85 at both grouping stages.")
+        directory = _validate_run_binding(root, manifest, run)
+        _verify_run_api_trace(directory, run, config)
         catalog_path = directory / "global.json"
         catalog = _read_json(catalog_path)
         canonical = catalog.get("canonical_information")
@@ -77,6 +253,7 @@ def _load_cohort(label: str, root: Path, expected_runs: int) -> dict[str, Any]:
 
     return {
         "label": label,
+        "expected_model": expected_model,
         "root": root,
         "manifest_path": manifest_path,
         "config_path": config_path,
@@ -311,6 +488,201 @@ def _load_vectors(path: Path, expected_texts: set[str]) -> tuple[dict[str, Seque
     return dict(zip(texts, vectors)), artifact.get("profile", {})
 
 
+def _verify_embedding_trace(
+    embeddings_path: Path,
+    audit_path: Path,
+    expected_texts: set[str],
+    expected_profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    artifact = _read_json(embeddings_path)
+    audit = _read_json(audit_path)
+    artifact_profile = artifact.get("profile", {})
+    if _profile_projection(artifact_profile) != _profile_projection(expected_profile):
+        raise ValueError("Shared embedding artifact profile differs from the cohort grouping profile.")
+
+    trace_dir = audit_path.parent / "api"
+    calls_path = trace_dir / "calls.jsonl"
+    if not calls_path.is_file():
+        raise ValueError("Shared embedding raw API trace calls.jsonl is missing.")
+    events = [json.loads(line) for line in calls_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    starts = {event["call_id"]: event for event in events if event.get("event") == "start"}
+    finishes = {event["call_id"]: event for event in events if event.get("event") == "finish"}
+    if not starts or set(starts) != set(finishes):
+        raise ValueError("Shared embedding audit has unmatched API request/response events.")
+    if any(event.get("status") != "received" or event.get("retries") != 0 for event in finishes.values()):
+        raise ValueError("Shared embedding audit contains failed or retried API calls.")
+
+    stage_names = {event.get("context", {}).get("stage") for event in starts.values()}
+    if stage_names != {EXPECTED_ANALYSIS_STAGE}:
+        raise ValueError("Shared embedding API calls were not recorded under the expected analysis stage.")
+
+    requested_by_text: dict[str, tuple[float, ...]] = {}
+    request_records = []
+    expected_model = expected_profile.get("model")
+    expected_base_url = str(expected_profile.get("base_url", "")).rstrip("/")
+    expected_dimensions = expected_profile.get("dimensions")
+    for call_id in sorted(starts):
+        start = starts[call_id]
+        finish = finishes[call_id]
+        stem = f"call_{call_id:04d}"
+        request_path = trace_dir / f"{stem}.request.json"
+        response_path = trace_dir / f"{stem}.response.json"
+        if not request_path.is_file() or not response_path.is_file():
+            raise ValueError(f"Shared embedding API trace files are missing for call {call_id}.")
+        request_bytes = request_path.read_bytes()
+        response_bytes = response_path.read_bytes()
+        if _sha256(request_path) != start.get("request_sha256"):
+            raise ValueError(f"Shared embedding request hash mismatch for call {call_id}.")
+        if _sha256(response_path) != finish.get("response_sha256"):
+            raise ValueError(f"Shared embedding response hash mismatch for call {call_id}.")
+        body = json.loads(request_bytes.decode("utf-8"))
+        response = json.loads(response_bytes.decode("utf-8"))
+        batch = body.get("input")
+        if (not isinstance(batch, list) or not batch or any(not isinstance(text, str) for text in batch)
+                or len(batch) != len(set(batch))):
+            raise ValueError(f"Shared embedding request {call_id} has an invalid or duplicate text batch.")
+        if body.get("model") != expected_model or body.get("encoding_format") != "float":
+            raise ValueError(f"Shared embedding request {call_id} used an unexpected model or format.")
+        if start.get("url") != expected_base_url + "/embeddings":
+            raise ValueError(f"Shared embedding request {call_id} used an unexpected endpoint.")
+        if expected_dimensions is None:
+            if "dimensions" in body:
+                raise ValueError(f"Shared embedding request {call_id} sent an unexpected dimensions override.")
+        elif body.get("dimensions") != expected_dimensions:
+            raise ValueError(f"Shared embedding request {call_id} used an unexpected dimensions value.")
+        if finish.get("model") != expected_model or response.get("model") != expected_model:
+            raise ValueError(f"Shared embedding response {call_id} returned an unexpected model.")
+        if finish.get("context") != start.get("context"):
+            raise ValueError(f"Shared embedding request/response context mismatch for call {call_id}.")
+
+        data = response.get("data")
+        if not isinstance(data, list) or len(data) != len(batch):
+            raise ValueError(f"Shared embedding response {call_id} does not cover its requested batch.")
+        vectors_by_index: dict[int, tuple[float, ...]] = {}
+        for item in data:
+            index = item.get("index") if isinstance(item, dict) else None
+            if type(index) is not int or not 0 <= index < len(batch) or index in vectors_by_index:
+                raise ValueError(f"Shared embedding response {call_id} has invalid indices.")
+            vector = item.get("embedding")
+            try:
+                vectors_by_index[index] = tuple(canonical_float32(vector))
+            except Exception as error:
+                raise ValueError(f"Shared embedding response {call_id} contains an invalid vector.") from error
+        if set(vectors_by_index) != set(range(len(batch))):
+            raise ValueError(f"Shared embedding response {call_id} indices do not cover the batch.")
+        for index, text in enumerate(batch):
+            if text in requested_by_text:
+                raise ValueError("Shared embedding trace requested a canonical text more than once.")
+            requested_by_text[text] = vectors_by_index[index]
+        request_records.append({
+            "call_id": call_id,
+            "request_sha256": start["request_sha256"],
+            "response_sha256": finish["response_sha256"],
+            "input_count": len(batch),
+        })
+
+    if set(requested_by_text) != expected_texts:
+        raise ValueError("Shared embedding API traces do not exactly cover the accepted catalog union.")
+    artifact_texts = artifact["texts"]
+    artifact_vectors = artifact["vectors"]
+    for text, vector in zip(artifact_texts, artifact_vectors):
+        try:
+            canonical = tuple(canonical_float32(vector))
+        except Exception as error:
+            raise ValueError("Shared embedding artifact contains an invalid vector.") from error
+        if canonical != requested_by_text[text]:
+            raise ValueError("Shared embedding artifact vector does not match its hashed raw API response.")
+
+    stage_counts = Counter(event["context"]["stage"] for event in starts.values())
+    effective_models = sorted({event.get("model") for event in finishes.values() if isinstance(event.get("model"), str)})
+    if (audit.get("attempted_calls") != len(starts) or audit.get("finished_calls") != len(finishes)
+            or audit.get("failed_http_or_transport_calls") != 0 or audit.get("retries") != 0
+            or audit.get("calls_by_stage") != dict(stage_counts) or audit.get("effective_models") != effective_models):
+        raise ValueError("Shared embedding audit.json summary does not match its raw API call trace.")
+    if effective_models != [expected_model]:
+        raise ValueError("Shared embedding trace did not use exactly the expected embedding model.")
+    return {
+        "verified_calls": len(starts),
+        "verified_text_vectors": len(requested_by_text),
+        "verified_stage": EXPECTED_ANALYSIS_STAGE,
+        "trace_path": str(calls_path.resolve()),
+        "trace_sha256": _sha256(calls_path),
+        "request_response_hashes": request_records,
+        "audit_summary_matches_trace": True,
+        "artifact_vectors_match_hashed_responses": True,
+    }
+
+
+def _validate_shared_manifest(
+    path: Path,
+    luna: Mapping[str, Any],
+    terra: Mapping[str, Any],
+    embeddings_path: Path,
+    embedding_audit_path: Path,
+    expected_text_count: int,
+    analysis_profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    shared_manifest = _read_json(path)
+    if shared_manifest.get("schema_version") != 1:
+        raise ValueError("Unsupported shared analysis manifest schema.")
+    cohort_inputs = {"luna": luna, "terra": terra}
+    listed_cohorts = shared_manifest.get("cohorts", {})
+    if set(listed_cohorts) != set(cohort_inputs):
+        raise ValueError("Shared analysis manifest must bind exactly the Luna and Terra cohorts.")
+    for key, cohort in cohort_inputs.items():
+        entry = listed_cohorts.get(key, {})
+        root = cohort["root"].resolve()
+        manifest_path = cohort["manifest_path"].resolve()
+        config_path = cohort["config_path"].resolve()
+        if (Path(entry.get("root", "")).resolve() != root
+                or Path(entry.get("manifest_path", "")).resolve() != manifest_path
+                or Path(entry.get("configuration_path", "")).resolve() != config_path):
+            raise ValueError(f"Shared analysis manifest paths do not bind to the {key} cohort.")
+        manifest_hash = _sha256(manifest_path)
+        config_hash = _sha256(config_path)
+        if (entry.get("manifest_sha256") != manifest_hash or entry.get("configuration_sha256") != config_hash
+                or entry.get("specification_configuration_sha256") != cohort["manifest"]["specification"]["configuration_sha256"]
+                or entry.get("input_sha256") != cohort["manifest"]["specification"]["input_sha256"]
+                or entry.get("code_sha256") != cohort["manifest"]["specification"]["code_sha256"]
+                or entry.get("run_count") != len(cohort["runs"])):
+            raise ValueError(f"Shared analysis manifest hashes/count do not bind to the {key} cohort.")
+        catalog_entries = entry.get("catalogs", [])
+        expected_catalogs = [
+            {
+                "run": run["run"],
+                "attempt": run["attempt"],
+                "path": str((cohort["root"] / run["directory"] / "global.json").resolve()),
+                "sha256": run["artifact_sha256"]["global.json"],
+            }
+            for run in cohort["runs"]
+        ]
+        if catalog_entries != expected_catalogs:
+            raise ValueError(f"Shared analysis manifest catalog list does not match accepted {key} artifacts.")
+
+    shared = shared_manifest.get("shared", {})
+    embeddings_path = embeddings_path.resolve()
+    embedding_audit_path = embedding_audit_path.resolve()
+    trace_path = embedding_audit_path.parent / "api" / "calls.jsonl"
+    if (Path(shared.get("embeddings_path", "")).resolve() != embeddings_path
+            or Path(shared.get("audit_path", "")).resolve() != embedding_audit_path
+            or Path(shared.get("trace_path", "")).resolve() != trace_path.resolve()):
+        raise ValueError("Shared analysis manifest paths do not bind to the embedding audit artifacts.")
+    if (shared.get("embeddings_sha256") != _sha256(embeddings_path)
+            or shared.get("audit_sha256") != _sha256(embedding_audit_path)
+            or shared.get("trace_sha256") != _sha256(trace_path)
+            or shared.get("stage") != EXPECTED_ANALYSIS_STAGE
+            or shared.get("text_count") != expected_text_count
+            or shared.get("profile") != analysis_profile):
+        raise ValueError("Shared analysis manifest hashes/profile/count do not match the artifacts.")
+    return {
+        "path": str(path.resolve()),
+        "sha256": _sha256(path),
+        "cohorts_bound": sorted(listed_cohorts),
+        "catalogs_bound": sum(len(listed_cohorts[key]["catalogs"]) for key in cohort_inputs),
+        "shared_artifacts_bound": ["embeddings.json", "audit.json", "api/calls.jsonl"],
+    }
+
+
 def _write_csv(path: Path, fieldnames: Sequence[str], rows: Sequence[Mapping[str, Any]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -458,6 +830,7 @@ def compare(
     expected_runs: int = 100,
     threshold: float = 0.85,
     overwrite: bool = False,
+    shared_manifest_path: Path | None = None,
 ) -> dict[str, Path]:
     if threshold != 0.85:
         raise ValueError("The comparison semantic threshold is fixed at 0.85.")
@@ -465,8 +838,8 @@ def compare(
     if not overwrite and output_dir.exists() and any((output_dir / name).exists() for name in output_names):
         raise FileExistsError("Comparison outputs already exist; pass --overwrite to replace them.")
 
-    luna = _load_cohort("gpt-6-luna", luna_root, expected_runs)
-    terra = _load_cohort("gpt-6.1-terra", terra_root, expected_runs)
+    luna = _load_cohort("gpt-6-luna", luna_root, "gpt-6-luna", expected_runs)
+    terra = _load_cohort("gpt-6.1-terra", terra_root, "gpt-6.1-terra", expected_runs)
     if luna["manifest"]["specification"]["input_sha256"] != terra["manifest"]["specification"]["input_sha256"]:
         raise ValueError("Luna and Terra cohorts do not use the same raw input hash.")
     if luna["configuration"].get("grouping") != terra["configuration"].get("grouping"):
@@ -474,12 +847,18 @@ def compare(
 
     extraction_luna = luna["configuration"].get("extraction", {})
     extraction_terra = terra["configuration"].get("extraction", {})
+    extraction_luna_nonmodel = {key: value for key, value in extraction_luna.items() if key != "model"}
+    extraction_terra_nonmodel = {key: value for key, value in extraction_terra.items() if key != "model"}
+    if extraction_luna_nonmodel != extraction_terra_nonmodel:
+        raise ValueError("Luna and Terra non-model extraction settings differ.")
+    if extraction_luna.get("model") != "gpt-6-luna" or extraction_terra.get("model") != "gpt-6.1-terra":
+        raise ValueError("Cohort configuration model names do not match the requested Luna/Terra comparison.")
     extraction_differences = {
         key: {"luna": extraction_luna.get(key), "terra": extraction_terra.get(key)}
         for key in sorted(set(extraction_luna) | set(extraction_terra))
         if extraction_luna.get(key) != extraction_terra.get(key)
     }
-    model_only_configuration_change = set(extraction_differences) <= {"model"}
+    model_only_configuration_change = set(extraction_differences) == {"model"}
 
     all_texts = {
         text
@@ -499,6 +878,15 @@ def compare(
     analysis_projection = json.dumps(_profile_projection(analysis_profile), sort_keys=True)
     if len(profile_projections) != 1 or analysis_projection not in profile_projections:
         raise ValueError("Shared post-hoc embeddings do not match the cohorts' common embedding profile.")
+    grouping_profile = luna["catalogs"][0]["metadata"]["embedding_profile"]
+    shared_manifest_path = shared_manifest_path or (embeddings_path.parent / "manifest.json")
+    shared_manifest_info = _validate_shared_manifest(
+        shared_manifest_path, luna, terra, embeddings_path, embedding_audit_path,
+        len(all_texts), analysis_profile,
+    )
+    embedding_trace_info = _verify_embedding_trace(
+        embeddings_path, embedding_audit_path, all_texts, grouping_profile,
+    )
 
     luna_within = _pair_rows(luna, luna, text_index, similarities, threshold, cartesian=False)
     terra_within = _pair_rows(terra, terra, text_index, similarities, threshold, cartesian=False)
@@ -565,6 +953,13 @@ def compare(
         for path in sorted(set(luna["code_hashes"]) | set(terra["code_hashes"]))
         if luna["code_hashes"].get(path) != terra["code_hashes"].get(path)
     }
+    if set(luna["code_hashes"]) != set(terra["code_hashes"]):
+        raise ValueError("Luna/Terra package hash inventories differ.")
+    if set(code_changes) != ALLOWED_CODE_HASH_CHANGES:
+        raise ValueError(
+            "Only the extraction model default may differ in the TOML and adapter configuration files; "
+            f"actual changed package paths: {sorted(code_changes)}."
+        )
     summary = {
         "schema_version": 1,
         "cohorts": {
@@ -596,9 +991,7 @@ def compare(
             "extraction_parameter_differences": extraction_differences,
             "configuration_differs_only_by_model": model_only_configuration_change,
             "code_hash_differences": code_changes,
-            "all_non_model_code_hashes_equal": not code_changes or set(code_changes) <= {
-                "experiments/configs/semantic_extraction.toml"
-            },
+            "all_non_model_code_hashes_equal": True,
             "shared_grouping_configuration": luna["configuration"]["grouping"],
             "shared_fresh_embedding_profile": analysis_profile,
             "common_posthoc_embedding_artifact": {
@@ -610,7 +1003,9 @@ def compare(
                 "path": str(embedding_audit_path.resolve()),
                 "sha256": _sha256(embedding_audit_path),
                 "summary": _read_json(embedding_audit_path),
+                "raw_trace_verification": embedding_trace_info,
             },
+            "shared_analysis_manifest": shared_manifest_info,
             "semantic_threshold": threshold,
             "semantic_method": "cosine >= threshold; deterministic maximum-cardinality one-to-one matching with augmenting paths; ties follow catalog order, then descending cosine and right index",
             "semantic_caveat": "Semantic matches are embedding-based repeatability proxies, not verified factual equivalence.",
@@ -623,6 +1018,7 @@ def compare(
                 "within_each_model": expected_runs * (expected_runs - 1) // 2,
                 "cross_model": expected_runs * expected_runs,
             },
+            "cross_model_pairs": cross_pair_summary,
         },
     }
 
@@ -654,7 +1050,16 @@ def compare(
                 value for value in (exact["coverage_a"], exact["coverage_b"]) if value is not None
             ) / sum(value is not None for value in (exact["coverage_a"], exact["coverage_b"]))
             if exact["coverage_a"] is not None or exact["coverage_b"] is not None else None,
-            "exact_fully_unmatched_fraction": (
+            "exact_mean_unmatched_fraction_per_catalog": math.fsum(
+                value for value in (
+                    exact["unmatched_a"] / row["count_a"] if row["count_a"] else None,
+                    exact["unmatched_b"] / row["count_b"] if row["count_b"] else None,
+                ) if value is not None
+            ) / sum(value is not None for value in (
+                exact["unmatched_a"] / row["count_a"] if row["count_a"] else None,
+                exact["unmatched_b"] / row["count_b"] if row["count_b"] else None,
+            )) if row["count_a"] or row["count_b"] else None,
+            "exact_total_unmatched_fraction_of_memberships": (
                 exact["unmatched_a"] + exact["unmatched_b"]
             ) / (row["count_a"] + row["count_b"]) if row["count_a"] + row["count_b"] else None,
             "exact_fully_matched": exact["unmatched_a"] == exact["unmatched_b"] == 0,
@@ -669,7 +1074,16 @@ def compare(
                 value for value in (semantic["coverage_a"], semantic["coverage_b"]) if value is not None
             ) / sum(value is not None for value in (semantic["coverage_a"], semantic["coverage_b"]))
             if semantic["coverage_a"] is not None or semantic["coverage_b"] is not None else None,
-            "semantic_fully_unmatched_fraction": (
+            "semantic_mean_unmatched_fraction_per_catalog": math.fsum(
+                value for value in (
+                    semantic["unmatched_a"] / row["count_a"] if row["count_a"] else None,
+                    semantic["unmatched_b"] / row["count_b"] if row["count_b"] else None,
+                ) if value is not None
+            ) / sum(value is not None for value in (
+                semantic["unmatched_a"] / row["count_a"] if row["count_a"] else None,
+                semantic["unmatched_b"] / row["count_b"] if row["count_b"] else None,
+            )) if row["count_a"] or row["count_b"] else None,
+            "semantic_total_unmatched_fraction_of_memberships": (
                 semantic["unmatched_a"] + semantic["unmatched_b"]
             ) / (row["count_a"] + row["count_b"]) if row["count_a"] + row["count_b"] else None,
             "semantic_fully_matched": semantic["unmatched_a"] == semantic["unmatched_b"] == 0,
@@ -698,6 +1112,7 @@ def main() -> int:
     parser.add_argument("--terra-root", type=Path, required=True)
     parser.add_argument("--embeddings", type=Path, required=True, help="Shared fresh post-hoc embeddings artifact.")
     parser.add_argument("--embedding-audit", type=Path, required=True)
+    parser.add_argument("--shared-manifest", type=Path, help="Shared analysis manifest; defaults to embeddings/../manifest.json.")
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parent)
     parser.add_argument("--runs", type=int, default=100)
     parser.add_argument("--threshold", type=float, default=0.85)
@@ -705,7 +1120,7 @@ def main() -> int:
     args = parser.parse_args()
     paths = compare(
         args.luna_root, args.terra_root, args.embeddings, args.embedding_audit,
-        args.output_dir, args.runs, args.threshold, args.overwrite,
+        args.output_dir, args.runs, args.threshold, args.overwrite, args.shared_manifest,
     )
     print(json.dumps({key: str(path) for key, path in paths.items()}, ensure_ascii=False, indent=2))
     return 0
