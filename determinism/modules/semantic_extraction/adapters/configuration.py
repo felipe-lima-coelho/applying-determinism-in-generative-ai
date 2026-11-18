@@ -18,7 +18,7 @@ class ConfigurationError(ValueError):
 @dataclass(frozen=True)
 class ExtractionConfig:
     provider: str = "openai"
-    model: str = "gpt-6-luna"
+    model: str = "gpt-6.1-terra"
     base_url: str = "https://api.openai.com/v1"
     max_concurrency: int = 4
     temperature: float = 0.0

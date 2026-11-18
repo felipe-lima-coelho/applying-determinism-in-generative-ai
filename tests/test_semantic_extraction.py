@@ -510,7 +510,7 @@ class ExtractionAdapterTests(unittest.TestCase):
     def test_exact_prompt_and_schema_separation_and_parameter_propagation(self):
         config = ExtractionConfig(seed=198, temperature=0.25, max_completion_tokens=900, timeout_seconds=7)
         body = OpenAICompatibleProvider(config, "test-credential").build_request_body(self.segment)
-        self.assertEqual(body["model"], "gpt-6-luna")
+        self.assertEqual(body["model"], "gpt-6.1-terra")
         self.assertEqual((body["seed"], body["temperature"], body["reasoning_effort"], body["max_completion_tokens"]), (198, 0.25, "none", 900))
         self.assertEqual(body["messages"], [{"role": "system", "content": system_prompt()}, {"role": "user", "content": user_message(self.segment)}])
         contract = structured_output()
