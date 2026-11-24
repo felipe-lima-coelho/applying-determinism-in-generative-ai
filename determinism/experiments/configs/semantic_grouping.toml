@@ -1,0 +1,11 @@
+# Agrupamento local e catálogo global dos representantes locais usam o mesmo limiar.
+provider = "openai"
+model = "text-embedding-3-small"
+base_url = "https://api.openai.com/v1"
+threshold = 0.85
+batch_size = 32
+timeout_seconds = 60.0
+api_key_env = "OPENAI_API_KEY"
+# Altere ao substituir os pesos de um servidor local sem mudar o nome/URL.
+cache_revision = "verify-20261026-21c0aefe62ec4343b6ab13bf192b7c9b"
+# dimensions = 1536 # Opcional; omitir usa a dimensão padrão do modelo.

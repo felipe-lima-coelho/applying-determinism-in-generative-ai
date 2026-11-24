@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "applying-determinism-in-generative-ai"
+version = "0.1.0"
+description = "Etapas determinísticas para experimentos com processamento de texto."
+requires-python = ">=3.11"
+dependencies = ["psycopg[binary]>=3.2,<4"]
+
+[project.scripts]
+determinism = "determinism.entrypoints.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["determinism*"]
+
+[tool.setuptools.package-data]
+"determinism.modules.semantic_extraction" = ["assets/*.txt", "assets/*.json"]
+"determinism.experiments" = ["configs/*.toml"]

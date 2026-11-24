@@ -1,0 +1,74 @@
+"""Linha de comando dos experimentos explícitos de mapeamento, extração e agrupamento."""
+
+import argparse
+from collections.abc import Sequence
+from pathlib import Path
+
+from ..experiments import run_extraction, run_grouping_with_catalog, run_mapping
+from ..experiments.word_mapping import mapping_output_path
+from ..modules.semantic_extraction.adapters import ConfigurationError, load_extraction_config
+from ..modules.semantic_extraction.domain import ExtractionError
+from ..modules.semantic_grouping.adapters import global_catalog_output_path, load_grouping_config
+from ..modules.semantic_grouping.domain import GroupingError
+from ..modules.text_mapping.adapters import DatasetFileError
+from ..modules.text_mapping.domain import DatasetFormatError
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="determinism")
+    commands = parser.add_subparsers(dest="command", required=True)
+    mapping = commands.add_parser("map", help="Reconstrói map em todos os segmentos.")
+    mapping.add_argument("input", type=Path, help="Transcrição JSON de entrada em data/transcriptions/; a fonte é preservada.")
+    mapping.add_argument(
+        "--output",
+        type=Path,
+        help="Arquivo de destino, diferente da entrada. Padrão: data/processed/<nome da transcrição>.",
+    )
+    extraction = commands.add_parser("extract", help="Refaz a extração e substitui information até cada token ter pelo menos duas referências.")
+    extraction.add_argument("input", type=Path, help="Dataset JSON já mapeado.")
+    extraction.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada. Salva progresso válido se atingir o limite de cobertura.")
+    extraction.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_extraction.toml.")
+    extraction.add_argument("--env-file", type=Path, default=Path(".env"), help="Credencial opcional em .env; ambiente tem precedência.")
+    grouping = commands.add_parser("group", help="Agrupa e canonicaliza por segmento, depois gera o catálogo global dos representantes.")
+    grouping.add_argument("input", type=Path, help="Dataset JSON com information em cada segmento.")
+    grouping.add_argument("--output", type=Path, help="Destino; por padrão, substitui a entrada após sucesso total.")
+    grouping.add_argument("--global-output", type=Path, help="Catálogo global; padrão: <destino sem extensão>.global.json.")
+    grouping.add_argument("--config", type=Path, help="Configuração TOML; padrão em experiments/configs/semantic_grouping.toml.")
+    grouping.add_argument("--env-file", type=Path, default=Path(".env"), help="Credenciais de embeddings/PostgreSQL; ambiente tem precedência.")
+    arguments = parser.parse_args(argv)
+
+    try:
+        if arguments.command == "map":
+            dataset = run_mapping(arguments.input, arguments.output)
+        elif arguments.command == "extract":
+            dataset = run_extraction(
+                arguments.input, arguments.output,
+                config=load_extraction_config(arguments.config), env_file=arguments.env_file,
+            )
+        elif arguments.command == "group":
+            result = run_grouping_with_catalog(
+                arguments.input, arguments.output,
+                global_output_path=arguments.global_output,
+                config=load_grouping_config(arguments.config), env_file=arguments.env_file,
+            )
+            dataset = result.dataset
+    except (DatasetFormatError, DatasetFileError, ExtractionError, ConfigurationError, GroupingError, OSError) as error:
+        parser.exit(status=1, message=f"Erro: {error}\n")
+
+    segments = sum(len(source["segments"]) for source in dataset)
+    destination = arguments.output if arguments.output is not None else arguments.input
+    if arguments.command == "map":
+        destination = mapping_output_path(arguments.input, arguments.output)
+        tokens = sum(len(segment["map"]) for source in dataset for segment in source["segments"])
+        print(f"Mapeamento salvo em {destination} (fontes: {len(dataset)}, segmentos: {segments}, palavras: {tokens})")
+    elif arguments.command == "extract":
+        information = sum(len(segment["information"]) for source in dataset for segment in source["segments"])
+        print(f"Extração salva em {destination} (fontes: {len(dataset)}, segmentos: {segments}, informações acumuladas: {information})")
+    else:
+        groups = sum(len(segment["set_different_information"]) for source in dataset for segment in source["segments"])
+        print(f"Agrupamento salvo em {destination} (fontes: {len(dataset)}, segmentos: {segments}, grupos: {groups})")
+        global_destination = arguments.global_output if arguments.global_output is not None else global_catalog_output_path(destination)
+        print(f"Catálogo global salvo em {global_destination} "
+              f"(representantes locais: {len(result.global_catalog['information'])}, "
+              f"informações únicas: {len(result.global_catalog['canonical_information'])})")
+    return 0
