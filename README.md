@@ -35,7 +35,7 @@ python -m pip install -e .
 4. Para agrupar as informações, configure também as variáveis `GROUPING_DB_*` em `.env` e inicie o PostgreSQL com pgvector:
 
    ```powershell
-   docker compose -f compose.semantic-grouping.yaml up -d
+   docker compose -f compose.semantic-grouping.yaml up -d --wait
    python -m determinism group data/processed/bebe_real_sources.json
    ```
 
