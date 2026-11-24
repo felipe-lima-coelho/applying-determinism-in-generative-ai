@@ -46,7 +46,7 @@ class ExperimentTests(unittest.TestCase):
         self.assertIs(experiment.repository, repository)
         self.assertEqual(repository.loaded, [Path("primeiro.json"), Path("segundo.json")])
         self.assertEqual(repository.saved[0][0], Path("resultado.json"))
-        self.assertEqual(repository.saved[1][0], Path("segundo.json"))
+        self.assertEqual(repository.saved[1][0], Path("data/processed/segundo.json"))
         self.assertIs(repository.saved[0][1], first)
         self.assertIs(repository.saved[1][1], second)
         self.assertIs(observed[0], first)

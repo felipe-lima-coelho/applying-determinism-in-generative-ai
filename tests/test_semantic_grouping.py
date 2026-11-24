@@ -4,16 +4,17 @@ import math
 import unittest
 from collections import Counter
 from dataclasses import replace
+from itertools import permutations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from determinism.entrypoints.cli import main
-from determinism.experiments import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping
+from determinism.experiments import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping, run_grouping_with_catalog
 from determinism.modules.semantic_grouping.adapters import GroupingConfig
 from determinism.modules.semantic_grouping.adapters.postgres_vectors import canonical_float32
 from determinism.modules.semantic_grouping.domain import (
-    CompleteLinkageGrouping, GroupingError, cosine_matrix,
+    CompleteLinkageGrouping, GroupingError, InformationOccurrence, canonical_representative, cosine_matrix,
     member_mean, validate_information_dataset, validate_partition,
 )
 from determinism.modules.semantic_grouping.ports import EmbeddingError, VectorStoreError
@@ -154,6 +155,7 @@ class GroupingApplicationTests(unittest.TestCase):
         for source_index, source in enumerate(result):
             for segment_index, segment in enumerate(source["segments"]):
                 groups = segment.pop("set_different_information")
+                canonical = segment.pop("canonical_information")
                 self.assertEqual(segment, original[source_index]["segments"][segment_index])
                 expected = original[source_index]["segments"][segment_index]["information"]
                 actual = [item for group in groups for item in group]
@@ -161,6 +163,13 @@ class GroupingApplicationTests(unittest.TestCase):
                 self.assertTrue(all(set(item) == {"info", "context", "avg_similarity"} for item in actual))
                 self.assertEqual(len(groups[0]), 3 if segment_index == 0 else 1)
                 self.assertTrue(all(item["avg_similarity"] == 1.0 for item in actual))
+                self.assertEqual(len(canonical), len(groups))
+                self.assertEqual(sorted(index for item in canonical for index in item["member_indices"]), list(range(len(expected))))
+                for item, group in zip(canonical, groups):
+                    representative = expected[item["representative_index"]]
+                    self.assertIn(item["representative_index"], item["member_indices"])
+                    self.assertEqual((item["info"], item["context"]), (representative["info"], representative["context"]))
+                    self.assertEqual([expected[index]["info"] for index in item["member_indices"]], [member["info"] for member in group])
         self.assertEqual(result, original)
 
     def test_cache_reuse_and_model_endpoint_revision_dimension_invalidation(self):
@@ -173,6 +182,21 @@ class GroupingApplicationTests(unittest.TestCase):
         for values in ({"model": "other"}, {"base_url": "http://localhost:1234/v1"}, {"cache_revision": "2"}, {"dimensions": 2}):
             group_dataset(value, provider=self.provider, vector_store=self.store, profile=replace(self.profile, **values))
         self.assertEqual(len(self.provider.calls), 5)
+
+    def test_extraction_triples_are_preserved_in_history_and_only_info_is_embedded(self):
+        value = dataset(["A", "B"])
+        items = value[0]["segments"][0]["information"]
+        items[0]["syntagm"] = {"subject": "Ana", "relation": "dormiu", "object": ""}
+        items[1]["syntagm"] = {"subject": "Bruno", "relation": "comprou", "object": "um livro"}
+        original = copy.deepcopy(value)
+        result = self.group(value)
+        self.assertEqual(value, original)
+        self.assertEqual(result[0]["segments"][0]["information"], items)
+        self.assertEqual(self.provider.calls, [("A", "B")])
+        self.assertTrue(all(set(item) == {"info", "context", "avg_similarity"}
+                            for group in result[0]["segments"][0]["set_different_information"] for item in group))
+        items[0]["syntagm"]["subject"] = "Outra pessoa"
+        self.assertEqual(result[0]["segments"][0]["information"], original[0]["segments"][0]["information"])
 
     def test_raw_and_cached_threshold_results_use_same_persisted_float32_representation(self):
         below = .8499999999
@@ -189,8 +213,10 @@ class GroupingApplicationTests(unittest.TestCase):
     def test_empty_information_is_empty_grouping_and_does_not_use_external_ports(self):
         value = dataset([], [])
         value[0]["segments"][0]["set_different_information"] = [["stale"]]
+        value[0]["segments"][0]["canonical_information"] = {"stale": True}
         result = self.group(value)
         self.assertEqual([segment["set_different_information"] for segment in result[0]["segments"]], [[], []])
+        self.assertEqual([segment["canonical_information"] for segment in result[0]["segments"]], [[], []])
         self.assertFalse(self.provider.calls)
         self.assertFalse(self.store.fetches)
 
@@ -250,6 +276,106 @@ class GroupingApplicationTests(unittest.TestCase):
             self.group(dataset(["A", "B", "C"]), strategy=Invalid())
 
 
+class CanonicalizationTests(unittest.TestCase):
+    def group(self, value, vectors, **options):
+        self.store = MemoryVectorStore()
+        self.provider = FakeEmbeddings(vectors)
+        return group_dataset(value, provider=self.provider, vector_store=self.store,
+                             profile=GroupingConfig().profile, **options)
+
+    def test_nearest_normalized_frequency_weighted_centroid_matches_canonical_selection(self):
+        texts = ["A", "B", "C", "C"]
+        vectors = {text: tuple(scale * component for component in
+                              (math.cos(math.radians(angle)), math.sin(math.radians(angle))))
+                   for text, angle, scale in (("A", 0, 1000), ("B", 10, .001), ("C", 20, 1))}
+        result = self.group(dataset(texts), vectors, threshold=.90)
+        segment = result[0]["segments"][0]
+        stored = [self.store.rows[(GroupingConfig().profile.key, text)] for text in texts]
+        units = [tuple(component / math.hypot(*vector) for component in vector) for vector in stored]
+        centroid = tuple(math.fsum(components) / len(units) for components in zip(*units))
+        # Oráculo independente: calcula o centroide e seus cossenos diretamente.
+        similarities = [math.fsum(a * b for a, b in zip(unit, centroid)) / math.hypot(*centroid) for unit in units]
+        expected_index = max(range(len(units)), key=similarities.__getitem__)
+        canonical = segment["canonical_information"][0]
+        self.assertEqual(expected_index, 1)
+        self.assertEqual(canonical["representative_index"], expected_index)
+        self.assertEqual(canonical["info"], "B")
+        self.assertEqual(canonical["member_indices"], [0, 1, 2, 3])
+        self.assertEqual(canonical["avg_similarity"], segment["set_different_information"][0][expected_index]["avg_similarity"])
+        # As normas arbitrárias do provedor não viram pesos semânticos.
+        unscaled = {text: (math.cos(math.radians(angle)), math.sin(math.radians(angle)))
+                    for text, angle in (("A", 0), ("B", 10), ("C", 20))}
+        other = self.group(dataset(texts), unscaled, threshold=.90)
+        self.assertEqual(other[0]["segments"][0]["canonical_information"][0]["info"], "B")
+
+    def test_frequency_of_occurrences_changes_representative_without_deduplication(self):
+        vectors = {"A": (1, 0), "B": (.98, .2)}
+        tied = self.group(dataset(["B", "A"]), vectors)[0]["segments"][0]
+        repeated = self.group(dataset(["A", "B", "B"]), vectors)[0]["segments"][0]
+        self.assertEqual(tied["canonical_information"][0]["info"], "A")
+        self.assertEqual(repeated["canonical_information"][0]["info"], "B")
+        self.assertEqual(repeated["canonical_information"][0]["member_indices"], [0, 1, 2])
+        self.assertEqual(len(repeated["set_different_information"][0]), 3)
+        self.assertEqual(self.provider.calls, [("A", "B")])
+
+    def test_exact_ties_select_same_text_and_context_under_all_input_permutations(self):
+        entries = [{"info": "Z", "context": "a", "tokens": [0]},
+                   {"info": "A", "context": "z", "tokens": [99]},
+                   {"info": "A", "context": "a", "tokens": [],
+                    "syntagm": {"subject": "ignored", "relation": "ignored", "object": "ignored"}}]
+        for order in permutations(entries):
+            with self.subTest(order=order):
+                value = dataset([])
+                value[0]["segments"][0]["information"] = list(order)
+                result = self.group(value, {"Z": (1, 0), "A": (1, 0)})
+                canonical = result[0]["segments"][0]["canonical_information"][0]
+                self.assertEqual((canonical["info"], canonical["context"]), ("A", "a"))
+                self.assertEqual(order[canonical["representative_index"]]["context"], "a")
+                self.assertEqual(self.provider.calls, [tuple(dict.fromkeys(item["info"] for item in order))])
+        identical = tuple(InformationOccurrence("A", "same") for _ in range(2))
+        self.assertEqual(canonical_representative(identical, {1: 1.0, 0: 1.0}), 0)
+        # Médias próximas não são arredondadas para criar empates artificiais.
+        self.assertEqual(canonical_representative(identical, {0: .9, 1: math.nextafter(.9, math.inf)}), 1)
+
+    def test_complete_linkage_is_called_once_and_canonicalization_keeps_its_partition(self):
+        class CountingStrategy:
+            def __init__(self):
+                self.calls = 0
+            def partition(self, matrix, threshold):
+                self.calls += 1
+                return CompleteLinkageGrouping().partition(matrix, threshold)
+        strategy = CountingStrategy()
+        vectors = {text: (math.cos(math.radians(angle)), math.sin(math.radians(angle)))
+                   for text, angle in (("A", 0), ("B", 10), ("C", 35))}
+        result = self.group(dataset(["A", "B", "C"]), vectors, threshold=.95, strategy=strategy)
+        segment = result[0]["segments"][0]
+        self.assertEqual(strategy.calls, 1)
+        self.assertEqual([item["member_indices"] for item in segment["canonical_information"]], [[0, 1], [2]])
+        self.assertEqual([len(group) for group in segment["set_different_information"]], [2, 1])
+        singleton = segment["canonical_information"][1]
+        self.assertEqual((singleton["info"], singleton["representative_index"], singleton["avg_similarity"]), ("C", 2, 1.0))
+
+    def test_zero_centroid_has_deterministic_cosine_distance_fallback(self):
+        result = self.group(dataset(["Z", "A"]), {"Z": (1, 0), "A": (-1, 0)}, threshold=-1)
+        canonical = result[0]["segments"][0]["canonical_information"]
+        self.assertEqual(canonical, [{"info": "A", "context": "context-0-1", "representative_index": 1,
+                                      "member_indices": [0, 1], "avg_similarity": -1.0}])
+        with self.assertRaises(GroupingError):
+            canonical_representative((), {})
+
+    def test_canonical_indices_stay_local_to_each_source_and_segment(self):
+        value = dataset(["Z", "A"], ["Z"])
+        value.append(dataset(["A"])[0])
+        result = self.group(value, {"Z": (1, 0), "A": (1, 0)})
+        actual = [segment["canonical_information"][0] for source in result for segment in source["segments"]]
+        self.assertEqual([item["representative_index"] for item in actual], [1, 0, 0])
+        self.assertEqual([item["member_indices"] for item in actual], [[0, 1], [0], [0]])
+        for empty in ([], [{"segments": []}]):
+            self.assertEqual(self.group(empty, {}), empty)
+            self.assertFalse(self.provider.calls)
+            self.assertFalse(self.store.fetches)
+
+
 class GroupingPersistenceTests(unittest.TestCase):
     def setUp(self):
         self.store = MemoryVectorStore()
@@ -284,6 +410,9 @@ class GroupingPersistenceTests(unittest.TestCase):
             with patch("os.replace", side_effect=OSError("failed")):
                 with self.assertRaises(OSError):
                     run_grouping(source, output, provider=self.provider, vector_store=self.store)
+            with patch("determinism.modules.semantic_grouping.application.grouping_stage.canonical_representative", side_effect=GroupingError("failed")):
+                with self.assertRaises(GroupingError):
+                    run_grouping(source, output, provider=self.provider, vector_store=self.store)
             self.assertEqual((source.read_bytes(), output.read_bytes()), before)
             self.assertEqual(sorted(path.name for path in Path(directory).iterdir()), ["data.json", "output.json"])
             # O cache pode sobreviver à falha da escrita, evitando nova inferência.
@@ -308,11 +437,35 @@ class GroupingPersistenceTests(unittest.TestCase):
     def test_empty_cli_works_without_api_key_or_database(self):
         with TemporaryDirectory() as directory:
             source = Path(directory) / "empty.json"
-            source.write_text(json.dumps(dataset([])), encoding="utf-8")
+            value = dataset([])
+            value[0]["segments"][0]["canonical_information"] = ["stale"]
+            source.write_text(json.dumps(value), encoding="utf-8")
             with patch("builtins.print") as printing:
                 self.assertEqual(main(["group", str(source), "--env-file", str(Path(directory) / "missing.env")]), 0)
-            self.assertIn("grupos: 0", printing.call_args.args[0])
+            self.assertIn("grupos: 0", printing.call_args_list[0].args[0])
             self.assertEqual(json.loads(source.read_text(encoding="utf-8"))[0]["segments"][0]["set_different_information"], [])
+            self.assertEqual(json.loads(source.read_text(encoding="utf-8"))[0]["segments"][0]["canonical_information"], [])
+
+    def test_cli_rebuilds_both_artifacts_and_cached_repetition_is_byte_identical(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "input.json"
+            output = Path(directory) / "output.json"
+            value = dataset(["A", "A", "B"])
+            value[0]["segments"][0].update({"set_different_information": ["stale"], "canonical_information": {"old": True}})
+            source.write_text(json.dumps(value), encoding="utf-8")
+            before = source.read_bytes()
+            def injected_run(input_path, output_path, **options):
+                return run_grouping_with_catalog(input_path, output_path, config=options["config"],
+                                    provider=self.provider, vector_store=self.store)
+            with patch("determinism.entrypoints.cli.run_grouping_with_catalog", side_effect=injected_run), patch("builtins.print"):
+                self.assertEqual(main(["group", str(source), "--output", str(output)]), 0)
+                first = output.read_bytes()
+                self.assertEqual(source.read_bytes(), before)
+                self.assertEqual(main(["group", str(output)]), 0)
+            self.assertEqual(output.read_bytes(), first)
+            self.assertEqual(len(self.provider.calls), 1)
+            canonical = json.loads(first)[0]["segments"][0]["canonical_information"]
+            self.assertEqual([item["member_indices"] for item in canonical], [[0, 1], [2]])
 
     def test_experiment_pipeline_repository_and_provider_are_replaceable(self):
         seen = []

@@ -7,7 +7,7 @@ MIN_TOKEN_COVERAGE = 2
 
 
 class IncompleteCoverageError(ExtractionError):
-    """Meta incompleta; um snapshot validado permite salvar e retomar o progresso."""
+    """Meta incompleta; um snapshot validado permite salvar o resultado parcial."""
 
     def __init__(self, message: str, *, partial_dataset: Dataset | None = None) -> None:
         super().__init__(message)
@@ -22,7 +22,7 @@ def add_information_counts(counts: dict[int, int], information: list[Information
 
 
 def count_information(segment: SegmentInput, information: list[Information]) -> dict[int, int]:
-    """O histórico completo é a fonte de verdade, independentemente de count antigo."""
+    """Conta somente as informações fornecidas, independentemente de count antigo."""
     counts = {entry.token: 0 for entry in segment.tokens}
     add_information_counts(counts, information)
     return counts

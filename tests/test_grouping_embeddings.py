@@ -23,6 +23,7 @@ class GroupingConfigurationTests(unittest.TestCase):
     def test_packaged_defaults_and_explicit_model_local_endpoint_and_dimensions(self):
         default = load_grouping_config()
         self.assertEqual((default.provider, default.model, default.threshold), ("openai", "text-embedding-3-small", 0.85))
+        self.assertEqual(GroupingConfig().threshold, .85)
         self.assertIsNone(default.dimensions)
         with TemporaryDirectory() as directory:
             path = Path(directory) / "local.toml"

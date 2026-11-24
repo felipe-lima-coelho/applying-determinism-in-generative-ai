@@ -1,9 +1,9 @@
 # Configuração versionada deste experimento; credenciais ficam no ambiente/.env.
 provider = "openai"
-model = "gpt-6-luna"
+model = "gpt-6.1-terra"
 base_url = "https://api.openai.com/v1"
 max_concurrency = 4
-# Falha sem salvar se a cobertura mínima de duas referências ainda não foi atingida.
+# Salva o resultado parcial e falha se a cobertura mínima ainda não foi atingida.
 max_generations_per_segment = 20
 temperature = 0.0
 seed = 42

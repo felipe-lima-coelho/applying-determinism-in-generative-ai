@@ -62,6 +62,8 @@ def user_message(segment: SegmentInput) -> str:
     mapping = mapping.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     return (
         "Extraia as informações semânticas presentes no trecho abaixo, seguindo todas as definições e regras estabelecidas no sistema.\n\n"
+        "Para cada informação, preencha info, tokens, context e syntagm. A tripla em syntagm deve representar a mesma informação de info, "
+        "e tokens deve conter exclusivamente os IDs das palavras originais que sustentam essa informação.\n\n"
         f"<trecho>\n{escape(segment.content)}\n</trecho>\n\n"
         f"<mapeamento_tokens>\n{mapping}\n</mapeamento_tokens>"
     )

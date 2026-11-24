@@ -9,6 +9,7 @@ from .contracts import (
     MapValidationError,
     ResponseValidationError,
     SegmentInput,
+    Syntagm,
     TokenReference,
     validate_information,
     validate_mapped_dataset,
@@ -23,7 +24,7 @@ from .coverage import (
 
 __all__ = [
     "CoverageFeedback", "Dataset", "ExtractionError", "InferenceResult", "Information",
-    "MapValidationError", "ResponseValidationError", "SegmentInput", "TokenReference",
+    "MapValidationError", "ResponseValidationError", "SegmentInput", "Syntagm", "TokenReference",
     "validate_information", "validate_mapped_dataset",
     "MIN_TOKEN_COVERAGE", "IncompleteCoverageError", "add_information_counts",
     "count_information", "validate_coverage_feasibility",

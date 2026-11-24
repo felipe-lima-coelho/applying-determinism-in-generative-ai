@@ -4,15 +4,14 @@ from .word_mapping import WordMappingExperiment, map_dataset, mapping_pipeline, 
 from .semantic_extraction import (
     SemanticExtractionExperiment, extract_dataset, extraction_pipeline, run_extraction,
 )
-from .semantic_grouping import SemanticGroupingExperiment, group_dataset, grouping_pipeline, run_grouping
-from .semantic_catalog import build_catalog, run_catalog, run_simulation
-from .catalog_comparison import compare_catalogs, run_catalog_comparison
-from ..modules.semantic_catalog.domain import RemovalSimulator, simulate_removal
+from .semantic_grouping import (
+    GroupingResult, SemanticGroupingExperiment, build_global_catalog, group_dataset,
+    group_dataset_with_catalog, grouping_pipeline, run_grouping, run_grouping_with_catalog,
+)
 
 __all__ = [
     "WordMappingExperiment", "map_dataset", "mapping_pipeline", "run_mapping",
     "SemanticExtractionExperiment", "extract_dataset", "extraction_pipeline", "run_extraction",
     "SemanticGroupingExperiment", "group_dataset", "grouping_pipeline", "run_grouping",
-    "build_catalog", "run_catalog", "RemovalSimulator", "simulate_removal", "run_simulation",
-    "compare_catalogs", "run_catalog_comparison",
+    "GroupingResult", "build_global_catalog", "group_dataset_with_catalog", "run_grouping_with_catalog",
 ]

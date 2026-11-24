@@ -43,12 +43,9 @@ class ExtractionStage:
 
     def __call__(self, dataset: Dataset) -> Dataset:
         segments = validate_mapped_dataset(dataset)
-        progress = []
-        # Todo o histórico também precisa ser validado antes da primeira chamada.
-        for segment in segments:
-            stored = dataset[segment.source_index]["segments"][segment.segment_index]
-            information = validate_information({"informacoes": stored.get("information", [])}, segment)
-            progress.append(_SegmentProgress(segment, information, count_information(segment, information)))
+        # Cada execução substitui a extração anterior, inclusive formatos antigos.
+        # Apenas as respostas desta execução contribuem para a cobertura.
+        progress = [_SegmentProgress(segment, [], count_information(segment, [])) for segment in segments]
         for segment in segments:
             validate_coverage_feasibility(segment)
         extracted = deepcopy(dataset)
@@ -59,6 +56,8 @@ class ExtractionStage:
             segment = state.segment
             target = extracted[segment.source_index]["segments"][segment.segment_index]
             target["information"] = state.information
+            target.pop("set_different_information", None)
+            target.pop("canonical_information", None)
             for token, count in state.counts.items():
                 target["map"][str(token)]["count"] = count
         incomplete = [state for state in progress if not state.covered]

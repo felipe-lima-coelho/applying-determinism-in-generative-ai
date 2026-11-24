@@ -38,7 +38,7 @@ class SemanticExtractionExperiment:
             self.repository.save(destination, error.partial_dataset)
             raise IncompleteCoverageError(
                 f"{error}\nProgresso parcial salvo em {destination}. A cobertura continua incompleta. "
-                "Para retomar, use esse arquivo salvo como entrada; as informações serão recontadas sem duplicar o histórico.",
+                "Uma nova execução de extract reinicia a extração e substitui esse resultado parcial.",
                 partial_dataset=error.partial_dataset,
             ) from None
         self.repository.save(destination, extracted)

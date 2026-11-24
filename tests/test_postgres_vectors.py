@@ -181,8 +181,14 @@ class PostgresIntegrationTests(unittest.TestCase):
                 with patch("builtins.print"):
                     self.assertEqual(main(["group", str(source), "--config", str(config)]), 0)
                     first = source.read_bytes()
+                    catalog_path = source.with_name("input.global.json")
+                    first_catalog = catalog_path.read_bytes()
                     self.assertEqual(main(["group", str(source), "--config", str(config)]), 0)
                 self.assertEqual(first, source.read_bytes())
+                self.assertEqual(first_catalog, catalog_path.read_bytes())
+                catalog = json.loads(first_catalog)
+                self.assertEqual(catalog["metadata"]["counts"]["original_information"], 3)
+                self.assertEqual([len(group) for group in catalog["set_different_information"]], [1, 1])
                 self.assertEqual(len(requests), 1)
                 self.assertEqual(requests[0]["input"], ["cli-a", "cli-b"])
         finally:

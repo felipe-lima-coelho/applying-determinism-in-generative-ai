@@ -1,4 +1,4 @@
-# Cada ocorrência é agrupada somente dentro de seu próprio segmento.
+# Agrupamento local e catálogo global dos representantes locais usam o mesmo limiar.
 provider = "openai"
 model = "text-embedding-3-small"
 base_url = "https://api.openai.com/v1"

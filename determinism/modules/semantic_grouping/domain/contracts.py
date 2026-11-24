@@ -1,4 +1,4 @@
-"""Contratos puros: ocorrências não são deduplicadas nem misturam segmentos."""
+"""Contratos puros das ocorrências e dos agrupamentos por cosseno."""
 
 import hashlib
 import json

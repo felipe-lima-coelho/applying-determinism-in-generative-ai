@@ -19,10 +19,17 @@ class ResponseValidationError(ExtractionError):
     """A resposta não atende ao contrato semântico estrutural."""
 
 
+class Syntagm(TypedDict):
+    subject: str
+    relation: str
+    object: str
+
+
 class Information(TypedDict):
     info: str
     tokens: list[int]
     context: str
+    syntagm: Syntagm
 
 
 @dataclass(frozen=True)
@@ -134,11 +141,24 @@ def validate_information(payload: object, segment: SegmentInput) -> list[Informa
     known_ids = segment.token_ids
     for index, item in enumerate(items):
         item_path = f"{path}[{index}]"
-        if not isinstance(item, dict) or set(item) != {"info", "tokens", "context"}:
-            raise ResponseValidationError(f"{item_path} deve conter somente info, tokens e context.")
+        if isinstance(item, dict) and set(item) == {"info", "tokens", "context"}:
+            raise ResponseValidationError(
+                f"{item_path}.syntagm é obrigatório em cada informação retornada pelo provedor."
+            )
+        if not isinstance(item, dict) or set(item) != {"info", "tokens", "context", "syntagm"}:
+            raise ResponseValidationError(f"{item_path} deve conter somente info, tokens, context e syntagm.")
         for field in ("info", "context"):
             if not isinstance(item[field], str) or not any(character.isalnum() for character in item[field]):
                 raise ResponseValidationError(f"{item_path}.{field} deve ser uma string com significado.")
+        syntagm = item["syntagm"]
+        if not isinstance(syntagm, dict) or set(syntagm) != {"subject", "relation", "object"}:
+            raise ResponseValidationError(f"{item_path}.syntagm deve conter somente subject, relation e object.")
+        for field in ("subject", "relation", "object"):
+            value = syntagm[field]
+            if field == "object" and value == "":
+                continue
+            if not isinstance(value, str) or not any(character.isalnum() for character in value):
+                raise ResponseValidationError(f"{item_path}.syntagm.{field} deve ser uma string com significado.")
         tokens = item["tokens"]
         if not isinstance(tokens, list) or len(tokens) < 2 or any(type(token) is not int for token in tokens):
             raise ResponseValidationError(f"{item_path}.tokens deve conter pelo menos dois IDs inteiros.")
@@ -146,5 +166,8 @@ def validate_information(payload: object, segment: SegmentInput) -> list[Informa
             raise ResponseValidationError(f"{item_path}.tokens deve ter IDs distintos em ordem crescente.")
         if not set(tokens).issubset(known_ids):
             raise ResponseValidationError(f"{item_path}.tokens contém um ID ausente no mapa original.")
-        result.append({"info": item["info"], "tokens": list(tokens), "context": item["context"]})
+        result.append({
+            "info": item["info"], "tokens": list(tokens), "context": item["context"],
+            "syntagm": {"subject": syntagm["subject"], "relation": syntagm["relation"], "object": syntagm["object"]},
+        })
     return result

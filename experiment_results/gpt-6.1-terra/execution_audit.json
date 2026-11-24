@@ -1,0 +1,99 @@
+{
+  "n_success": 100,
+  "attempts": 100,
+  "failed_attempts": 0,
+  "count_distribution": {
+    "9": 2,
+    "10": 8,
+    "11": 49,
+    "12": 30,
+    "13": 10,
+    "14": 1
+  },
+  "api_calls_by_stage": {
+    "extraction": 820,
+    "local_grouping": 100,
+    "global_grouping": 100,
+    "cross_run_analysis": 4
+  },
+  "total_api_calls": 1024,
+  "usage_by_stage": {
+    "extraction": {
+      "prompt_tokens": 3910824,
+      "completion_tokens": 256281,
+      "total_tokens": 4167105
+    },
+    "local_grouping": {
+      "prompt_tokens": 49896,
+      "total_tokens": 49896
+    },
+    "global_grouping": {
+      "prompt_tokens": 30715,
+      "total_tokens": 30715
+    },
+    "cross_run_analysis": {
+      "prompt_tokens": 2856,
+      "total_tokens": 2856
+    }
+  },
+  "effective_models": {
+    "gpt-6.1-terra": 820,
+    "text-embedding-3-small": 204
+  },
+  "system_fingerprints": {},
+  "chat_cache_token_totals": {
+    "cached_tokens": 0,
+    "cache_write_tokens": 0
+  },
+  "chat_cache_usage_field_counts": {
+    "cached_tokens": 820,
+    "cache_write_tokens": 820
+  },
+  "generations_per_segment_min": 2,
+  "generations_per_segment_max": 4,
+  "sum_run_seconds": 1663.7281921000686,
+  "sum_stage_seconds": {
+    "mapping": 0.5665400001453236,
+    "extraction": 1542.5377026003553,
+    "local_grouping": 64.01010970014613,
+    "global_grouping": 56.524635600391775
+  },
+  "input_sha256": "a549ec7c674c2a86e7879dee29b02d3ec969a0f7445f24b26ffe955d57f7f787",
+  "source_hash_matches": true,
+  "code_hash_matches": true,
+  "configuration_differences_from_luna": {
+    "extraction": {
+      "model": {
+        "luna": "gpt-6-luna",
+        "terra": "gpt-6.1-terra"
+      }
+    },
+    "grouping": {}
+  },
+  "only_extraction_model_changed": true,
+  "code_file_differences_from_luna": [
+    "experiments/configs/semantic_extraction.toml",
+    "modules/semantic_extraction/adapters/configuration.py"
+  ],
+  "all_pipeline_checks": {
+    "raw_snapshot_matches": true,
+    "mapped_all_142_zero_counts": true,
+    "extraction_min_coverage2": true,
+    "all_local_inputs_fresh_and_exact": true,
+    "all_global_inputs_fresh_and_exact": true,
+    "chat_settings_exact": true,
+    "all_returned_chat_models_exact": true,
+    "request_response_hashes_match": true,
+    "both_thresholds085": true,
+    "empty_local_lookup": true,
+    "all_stage_artifact_hashes_match": true
+  },
+  "specification": {
+    "input_sha256": "a549ec7c674c2a86e7879dee29b02d3ec969a0f7445f24b26ffe955d57f7f787",
+    "configuration_sha256": "63163e47a43e79ac2d792850bd004508ff9334a10a1dbdb68ce7e3a458cd5796",
+    "repeats": 100,
+    "max_attempts_per_sample": 3,
+    "code_sha256": "aecca1e4857da5e0f46db5ce48c3bf30cb895e43f3bc48bbf7f1ebfe99ec6c62"
+  },
+  "analysis_completed_at": "2026-11-18T08:58:55.314729+00:00"
+}
